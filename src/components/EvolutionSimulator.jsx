@@ -4,6 +4,7 @@ import { temperatureToRGB } from '../simulation/blackbody';
 import { Play, Pause, RotateCcw, Flame, Atom } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import HabitableZoneVisualizer from './HabitableZoneVisualizer';
+import StellarSpectroscopy from './StellarSpectroscopy';
 
 export default function EvolutionSimulator({
   selectedMass,
@@ -179,6 +180,17 @@ export default function EvolutionSimulator({
               <div className="fusion-state-details">{evolutionState.coreState}</div>
             </div>
           </div>
+        </div>
+
+        {/* Live Photospheric Spectrum & Nucleosynthetic Diagnostics */}
+        <div className="sim-card spec-sim-card">
+          <StellarSpectroscopy
+            tempOverride={evolutionState.temp}
+            lumOverride={evolutionState.lum}
+            massOverride={selectedMass}
+            stageOverride={evolutionState.stage}
+            compact={true}
+          />
         </div>
 
         {/* Circumstellar Habitable Zone Planetary Fate Card */}

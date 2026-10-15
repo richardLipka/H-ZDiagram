@@ -2442,3 +2442,533 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
+/* ==========================================================================
+   STELLAR SPECTROSCOPY & CORE FUSION ENGINE STYLING
+   ========================================================================== */
+.stellar-spectroscopy-card {
+  background: rgba(2, 8, 22, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  border-radius: var(--radius-hud-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.stellar-spectroscopy-card.compact {
+  padding: 8px 10px;
+  gap: 6px;
+}
+
+.spec-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.15);
+  padding-bottom: 6px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.spec-title-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spec-header-icon {
+  color: var(--holo-cyan);
+}
+
+.spec-title {
+  font-family: var(--font-hud);
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.spec-tab-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.spec-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  background: rgba(0, 20, 45, 0.6);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 3px;
+  color: var(--text-telemetry);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.spec-tab-btn:hover {
+  background: rgba(0, 240, 255, 0.15);
+  color: #ffffff;
+  border-color: var(--holo-cyan);
+}
+
+.spec-tab-btn.active {
+  background: rgba(0, 240, 255, 0.25);
+  border-color: var(--holo-cyan);
+  color: #ffffff;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.35);
+}
+
+.spec-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Optical Spectrum Viewport & Rainbow Strip */
+.optical-spectrum-viewport {
+  position: relative;
+  width: 100%;
+  height: 32px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  overflow: hidden;
+  cursor: crosshair;
+  background: #000000;
+  box-sizing: border-box;
+}
+
+.spectrum-rainbow-strip {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    #581c87 0%,   /* 380 nm - Near UV / Violet */
+    #3b82f6 18%,  /* 440 nm - Blue */
+    #06b6d4 32%,  /* 490 nm - Cyan */
+    #10b981 46%,  /* 530 nm - Green */
+    #eab308 64%,  /* 590 nm - Yellow (Na D) */
+    #f97316 78%,  /* 640 nm - Orange */
+    #ef4444 88%,  /* 680 nm - Red (H-alpha) */
+    #7f1d1d 100%  /* 750 nm - Deep Red / Near IR */
+  );
+}
+
+/* Physical Spectral Lines */
+.spectral-line-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.92);
+  transform: translateX(-50%);
+  pointer-events: none;
+  transition: width 0.15s ease, background-color 0.15s ease;
+}
+
+.spectral-line-marker.molecular {
+  background: rgba(0, 0, 0, 0.85);
+  border-left: 1px solid rgba(0, 0, 0, 0.6);
+  border-right: 1px solid rgba(0, 0, 0, 0.6);
+}
+
+.spectral-line-marker.hovered {
+  background: #ffffff !important;
+  box-shadow: 0 0 8px #ffffff, 0 0 14px var(--holo-cyan);
+  z-index: 10;
+  width: 2.5px !important;
+}
+
+.line-tooltip-pill {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 20, 45, 0.95);
+  border: 1px solid var(--holo-cyan);
+  color: #ffffff;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.spectrum-cursor-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 4px #ffffff;
+  pointer-events: none;
+}
+
+.spectrum-ticks-row {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  color: var(--text-telemetry);
+  padding: 0 2px;
+}
+
+/* 2D Spectrum Flux Curve */
+.spectrum-curve-box {
+  background: rgba(0, 15, 30, 0.6);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  border-radius: 3px;
+  padding: 4px 6px;
+  box-sizing: border-box;
+}
+
+.curve-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  margin-bottom: 2px;
+}
+
+.curve-title {
+  color: var(--text-telemetry);
+}
+
+.curve-temp-badge {
+  color: var(--holo-cyan);
+  font-weight: 700;
+}
+
+.spectrum-curve-svg {
+  width: 100%;
+  height: 36px;
+  display: block;
+}
+
+/* Inspection Banner */
+.spectrum-inspection-banner {
+  background: rgba(0, 20, 45, 0.6);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 3px;
+  padding: 6px 8px;
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+}
+
+.line-instruction-readout {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+.line-instruction-readout .info-icon {
+  color: var(--holo-cyan);
+  flex-shrink: 0;
+}
+
+.line-detail-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.line-detail-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.line-name-highlight {
+  font-family: var(--font-hud);
+  font-size: 11px;
+  color: #ffffff;
+  letter-spacing: 0.04em;
+}
+
+.line-wl-badge {
+  font-size: 9px;
+  color: #00f0ff;
+  background: rgba(0, 240, 255, 0.15);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.line-elem-badge {
+  font-size: 9px;
+  color: #fbbf24;
+}
+
+.line-strength-tag {
+  font-size: 8.5px;
+  color: #cbd5e1;
+}
+
+.line-detail-desc {
+  font-size: 9px;
+  color: #cbd5e1;
+  line-height: 1.35;
+}
+
+.line-transition {
+  color: var(--text-telemetry);
+  font-style: italic;
+}
+
+/* Core Fusion Engine Styles */
+.fusion-core-card {
+  background: rgba(0, 20, 45, 0.55);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 3px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fusion-engine-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.flame-icon {
+  color: #f59e0b;
+}
+
+.fusion-type-name {
+  font-family: var(--font-hud);
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.04em;
+}
+
+.fusion-explanation {
+  font-size: 9.5px;
+  color: #cbd5e1;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.fusion-formula-box {
+  background: rgba(0, 10, 25, 0.8);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  border-radius: 2px;
+  padding: 4px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.formula-label {
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  color: var(--text-telemetry);
+  text-transform: uppercase;
+}
+
+.formula-code {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: #38bdf8;
+  word-break: break-all;
+}
+
+.core-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.core-stat-card {
+  background: rgba(0, 15, 30, 0.55);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  border-radius: 3px;
+  padding: 5px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.c-stat-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-telemetry);
+}
+
+.c-stat-val {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.c-stat-val.highlight {
+  color: #38bdf8;
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.c-stat-sub {
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.composition-bar-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.comp-bar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-telemetry);
+}
+
+.dredge-badge {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.comp-multi-bar {
+  display: flex;
+  width: 100%;
+  height: 16px;
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 240, 255, 0.2);
+}
+
+.comp-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.comp-segment.h-seg {
+  background: #3b82f6;
+}
+
+.comp-segment.he-seg {
+  background: #f59e0b;
+}
+
+.comp-segment.z-seg {
+  background: #10b981;
+}
+
+/* Spectroscopy Sources & Archives Tab */
+.spec-archives-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  color: var(--text-telemetry);
+  line-height: 1.35;
+  margin-bottom: 4px;
+}
+
+.spec-archives-intro .intro-icon {
+  color: var(--holo-cyan);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.spec-links-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.spec-archive-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(0, 20, 45, 0.5);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 3px;
+  padding: 5px 8px;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.spec-archive-card:hover {
+  background: rgba(0, 240, 255, 0.12);
+  border-color: var(--holo-cyan);
+  transform: translateX(2px);
+}
+
+.spec-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.spec-link-name {
+  font-family: var(--font-hud);
+  font-size: 10px;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.spec-link-badge {
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  font-weight: 700;
+  color: var(--holo-cyan);
+  background: rgba(0, 240, 255, 0.15);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.spec-ext-icon {
+  color: var(--holo-cyan);
+  opacity: 0.7;
+}
+
+.spec-link-desc {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-telemetry);
+  margin: 0;
+  line-height: 1.3;
+}
+
+/* Evolution Panel Integration */
+.sim-card.spec-sim-card {
+  padding: 8px;
+  background: rgba(0, 15, 38, 0.6);
+  border: 1px solid var(--hud-border-dim);
+  border-radius: var(--radius-hud-sm);
+}
+
+

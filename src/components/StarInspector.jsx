@@ -6,6 +6,7 @@ import { fetchSimbadData } from '../services/simbadService';
 import { useLanguage } from '../i18n/LanguageContext';
 
 import HabitableZoneVisualizer from './HabitableZoneVisualizer';
+import StellarSpectroscopy from './StellarSpectroscopy';
 
 export default function StarInspector({
   star,
@@ -239,6 +240,11 @@ export default function StarInspector({
             )}
           </div>
         )}
+      </div>
+
+      {/* Stellar Optical Spectroscopy & Core Fusion Engine */}
+      <div className="inspector-section spectroscopy-section hud-section">
+        <StellarSpectroscopy star={star} />
       </div>
 
       {/* Circumstellar Habitable Zone & 2D Orbital Radar */}
