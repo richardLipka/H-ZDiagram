@@ -50,7 +50,7 @@ export default function AcademySimulator({
         if (!s) return false;
         return Boolean(s.hasExoplanets && s.exoplanetCount > 0);
       },
-      hintStarId: 'trappist_1'
+      hintStarId: 'trappist1'
     },
     {
       id: 'white_dwarf',
@@ -113,7 +113,12 @@ export default function AcademySimulator({
   // Handle hint jump
   const handleJumpToHintStar = () => {
     if (!currentMission || !famousStars.length) return;
-    const target = famousStars.find(s => s.id === currentMission.hintStarId || s.name.toLowerCase().includes(currentMission.hintStarId));
+    const cleanHint = currentMission.hintStarId.toLowerCase().replace(/[-_ ]/g, '');
+    const target = famousStars.find(s => {
+      const cleanId = (s.id || '').toLowerCase().replace(/[-_ ]/g, '');
+      const cleanName = (s.name || '').toLowerCase().replace(/[-_ ]/g, '');
+      return cleanId === cleanHint || cleanName.includes(cleanHint);
+    });
     if (target) {
       onSelectStar(target);
     }

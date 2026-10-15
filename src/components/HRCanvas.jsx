@@ -700,7 +700,7 @@ export default function HRCanvas({
     ctx.clip();
 
     for (let star of famousStars) {
-      if (filterClass !== 'ALL' && !star.spectralType.startsWith(filterClass)) continue;
+      if (filterClass !== 'ALL' && (!star.spectralType || !star.spectralType.startsWith(filterClass))) continue;
       if (filterPlanetsOnly && !star.hasExoplanets) continue;
       if (filterSearch && !star.name.toLowerCase().includes(filterSearch.toLowerCase())) continue;
       if (star.isExotic && !showRelativisticRemnants) continue;
@@ -938,7 +938,7 @@ export default function HRCanvas({
 
     for (let star of famousStars) {
       // Honor all active filters - do not react on filtered stars
-      if (filterClass !== 'ALL' && !star.spectralType.startsWith(filterClass)) continue;
+      if (filterClass !== 'ALL' && (!star.spectralType || !star.spectralType.startsWith(filterClass))) continue;
       if (filterPlanetsOnly && !star.hasExoplanets) continue;
       if (filterSearch && !star.name.toLowerCase().includes(filterSearch.toLowerCase())) continue;
       if (star.isExotic && !showRelativisticRemnants) continue;
@@ -967,9 +967,34 @@ export default function HRCanvas({
       } catch {}
     }
 
-    // Clean click on star targets star
-    if (!wasDragging && hoveredStar) {
-      onSelectStar(hoveredStar);
+    // Clean click on star targets star (works with hover or direct coordinate hit-test for mobile/touch)
+    if (!wasDragging) {
+      let target = hoveredStar;
+      if (!target && canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+        const coords = new HRCoordinates(rect.width, rect.height, { top: 68, right: 75, bottom: 65, left: 85 });
+        coords.setTransform(zoom, pan.x, pan.y);
+        let minD = 22;
+        for (let star of famousStars) {
+          if (filterClass !== 'ALL' && (!star.spectralType || !star.spectralType.startsWith(filterClass))) continue;
+          if (filterPlanetsOnly && !star.hasExoplanets) continue;
+          if (filterSearch && !star.name.toLowerCase().includes(filterSearch.toLowerCase())) continue;
+          if (star.isExotic && !showRelativisticRemnants) continue;
+
+          const p = coords.toCanvas(star.temp, star.lum);
+          if (!coords.isInPlotBounds(p.x, p.y)) continue;
+          const dist = Math.hypot(p.x - clickX, p.y - clickY);
+          if (dist < minD) {
+            minD = dist;
+            target = star;
+          }
+        }
+      }
+      if (target) {
+        onSelectStar(target);
+      }
     }
   };
 

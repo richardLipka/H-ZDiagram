@@ -14,10 +14,12 @@ import Footer from './components/Footer';
 import { loadStellarDatasets } from './services/dataLoader';
 import { getEvolutionState, EVOLUTION_TRACKS } from './simulation/evolutionTracks';
 import { generateIsochronePoints } from './simulation/clusterSimulation';
+import { useLanguage } from './i18n/LanguageContext';
 
 import './App.css';
 
 export default function App() {
+  const { lang } = useLanguage();
   // Datasets loaded asynchronously from /data/
   const [famousStars, setFamousStars] = useState([]);
   const [backgroundStars, setBackgroundStars] = useState([]);
@@ -103,7 +105,7 @@ export default function App() {
         return prev.filter((s) => s.id !== star.id);
       } else {
         if (prev.length >= 4) {
-          alert('You can compare up to 4 stars simultaneously.');
+          alert(lang === 'cs' ? 'Lze porovnávat maximálně 4 hvězdy současně.' : 'You can compare up to 4 stars simultaneously.');
           return prev;
         }
         return [...prev, star];
@@ -118,7 +120,7 @@ export default function App() {
   const handleAddStarToCompare = (star) => {
     if (!compareStars.some((s) => s.id === star.id)) {
       if (compareStars.length >= 4) {
-        alert('You can compare up to 4 stars simultaneously.');
+        alert(lang === 'cs' ? 'Lze porovnávat maximálně 4 hvězdy současně.' : 'You can compare up to 4 stars simultaneously.');
         return;
       }
       setCompareStars((prev) => [...prev, star]);
@@ -135,8 +137,8 @@ export default function App() {
     return (
       <div className="loading-screen">
         <div className="loading-spinner" />
-        <h2>Loading Astronomical Datasets...</h2>
-        <p>Decoupled Hipparcos, Yale Bright Star, and Gliese (HYG v3.8) stellar catalog</p>
+        <h2>{lang === 'cs' ? 'Načítání astronomických databází...' : 'Loading Astronomical Datasets...'}</h2>
+        <p>{lang === 'cs' ? 'Katalogy Hipparcos, Yale Bright Star a Gliese (HYG v3.8)' : 'Decoupled Hipparcos, Yale Bright Star, and Gliese (HYG v3.8) stellar catalog'}</p>
       </div>
     );
   }

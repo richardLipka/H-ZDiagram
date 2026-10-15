@@ -84,7 +84,7 @@ export default function ClusterSimulator({
 
         <div className="slider-ticks">
           <span>50 Myr ({t('clusterYoung')})</span>
-          <span>500 Myr (Hyades)</span>
+          <span>500 Myr ({lang === 'cs' ? 'Hyády' : 'Hyades'})</span>
           <span>4 Gyr ({t('clusterSolarAge')})</span>
           <span>13 Gyr ({t('clusterGlobular')})</span>
         </div>

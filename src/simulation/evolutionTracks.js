@@ -428,7 +428,7 @@ export function getEvolutionState(massKey, progress) {
     stage: t < 0.5 ? s0.stage : s1.stage,
     temp: Math.round(temp),
     lum: parseFloat(lum.toPrecision(3)),
-    radius: parseFloat(radius.toFixed(2)),
+    radius: radius < 0.01 ? parseFloat(radius.toPrecision(2)) : parseFloat(radius.toFixed(2)),
     coreState: t < 0.5 ? s0.coreState : s1.coreState,
     description: t < 0.5 ? s0.description : s1.description,
     trackName: track.name,

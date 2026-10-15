@@ -24,7 +24,7 @@ export default function ControlPanel({
   famousStars,
   onSelectStar
 }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const spectralClasses = ['ALL', 'O', 'B', 'A', 'F', 'G', 'K', 'M', 'D'];
 
   return (
@@ -99,37 +99,86 @@ export default function ControlPanel({
           <span>{t('sensorOverlaysHeader')}</span>
         </div>
         <div className="toggles-list hud-toggles">
-          <label className="toggle-item hud-toggle" onClick={onToggleBackgroundPopulation}>
+          <label
+            className="toggle-item hud-toggle"
+            onClick={onToggleBackgroundPopulation}
+            role="checkbox"
+            aria-checked={showBackgroundPopulation}
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onToggleBackgroundPopulation(); } }}
+          >
             <span className="hud-checkbox-bracket">{showBackgroundPopulation ? '[ ■ ]' : '[   ]'}</span>
             <span>{t('toggleHipparcos')}</span>
           </label>
 
-          <label className="toggle-item hud-toggle" onClick={onToggleRegions}>
+          <label
+            className="toggle-item hud-toggle"
+            onClick={onToggleRegions}
+            role="checkbox"
+            aria-checked={showRegions}
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onToggleRegions(); } }}
+          >
             <span className="hud-checkbox-bracket">{showRegions ? '[ ■ ]' : '[   ]'}</span>
             <span>{t('toggleRegions')}</span>
           </label>
 
-          <label className="toggle-item hud-toggle" onClick={onToggleIsoradii}>
+          <label
+            className="toggle-item hud-toggle"
+            onClick={onToggleIsoradii}
+            role="checkbox"
+            aria-checked={showIsoradii}
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onToggleIsoradii(); } }}
+          >
             <span className="hud-checkbox-bracket">{showIsoradii ? '[ ■ ]' : '[   ]'}</span>
             <span>{t('toggleIsoradii')}</span>
           </label>
 
-          <label className="toggle-item hud-toggle" onClick={onToggleFamousLabels}>
+          <label
+            className="toggle-item hud-toggle"
+            onClick={onToggleFamousLabels}
+            role="checkbox"
+            aria-checked={showFamousLabels}
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onToggleFamousLabels(); } }}
+          >
             <span className="hud-checkbox-bracket">{showFamousLabels ? '[ ■ ]' : '[   ]'}</span>
             <span>{t('toggleLabels')}</span>
           </label>
 
-          <label className="toggle-item hud-toggle" onClick={onTogglePlanetsOnly}>
+          <label
+            className="toggle-item hud-toggle"
+            onClick={onTogglePlanetsOnly}
+            role="checkbox"
+            aria-checked={filterPlanetsOnly}
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onTogglePlanetsOnly(); } }}
+          >
             <span className="hud-checkbox-bracket">{filterPlanetsOnly ? '[ ■ ]' : '[   ]'}</span>
             <span>{t('togglePlanetsOnly')}</span>
           </label>
 
-          <label className="toggle-item hud-toggle" onClick={onToggleGaiaFineStructure}>
+          <label
+            className="toggle-item hud-toggle"
+            onClick={onToggleGaiaFineStructure}
+            role="checkbox"
+            aria-checked={showGaiaFineStructure}
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onToggleGaiaFineStructure(); } }}
+          >
             <span className="hud-checkbox-bracket">{showGaiaFineStructure ? '[ ■ ]' : '[   ]'}</span>
             <span>{t('toggleGaiaFine')}</span>
           </label>
 
-          <label className="toggle-item hud-toggle" onClick={onToggleRelativisticRemnants}>
+          <label
+            className="toggle-item hud-toggle"
+            onClick={onToggleRelativisticRemnants}
+            role="checkbox"
+            aria-checked={showRelativisticRemnants}
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onToggleRelativisticRemnants(); } }}
+          >
             <span className="hud-checkbox-bracket">{showRelativisticRemnants ? '[ ■ ]' : '[   ]'}</span>
             <span>{t('toggleRelativistic')}</span>
           </label>
@@ -140,7 +189,7 @@ export default function ControlPanel({
       <div className="hud-sidebar-footer">
         <div className="telemetry-bar">
           <span className="t-label">{t('dbStatus')}</span>
-          <span className="t-val">{famousStars ? `${famousStars.length} ${t('dbStatus') === 'KATALOG:' ? 'hvězd' : 'stars'}` : '488 stars'}</span>
+          <span className="t-val">{famousStars ? `${famousStars.length} ${lang === 'cs' ? 'hvězd' : 'stars'}` : (lang === 'cs' ? '488 hvězd' : '488 stars')}</span>
         </div>
         <div className="telemetry-bar">
           <span className="t-label">{t('calibration')}</span>

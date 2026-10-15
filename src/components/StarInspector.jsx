@@ -81,7 +81,7 @@ export default function StarInspector({
             )}
           </div>
           <div className="inspector-title-row">
-            <h2>{star.name.toUpperCase()}</h2>
+            <h2>{(star.name || '').toUpperCase()}</h2>
             <a
               href={getWikipediaUrl(star, lang)}
               target="_blank"
@@ -106,7 +106,7 @@ export default function StarInspector({
               </a>
             )}
             {star.bayer && <span className="bayer-tag">[ {star.bayer} ]</span>}
-            <span className="constellation-tag">{t('constellationPrefix')} {star.constellation.toUpperCase()}</span>
+            <span className="constellation-tag">{t('constellationPrefix')} {(star.constellation || '—').toUpperCase()}</span>
             {star.hasExoplanets && (
               <a
                 href={`https://exoplanetarchive.ipac.caltech.edu/overview/${encodeURIComponent(star.name)}`}
@@ -282,7 +282,7 @@ export default function StarInspector({
           </div>
           <div className="param-item hud-param">
             <span className="param-label">{t('paramLifetime')}</span>
-            <span className="param-val">{lifetime.toUpperCase()}</span>
+            <span className="param-val">{lifetime ? lifetime.toUpperCase() : '—'}</span>
           </div>
         </div>
       </div>
