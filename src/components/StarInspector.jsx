@@ -106,6 +106,17 @@ export default function StarInspector({
             )}
             {star.bayer && <span className="bayer-tag">[ {star.bayer} ]</span>}
             <span className="constellation-tag">{t('constellationPrefix')} {star.constellation.toUpperCase()}</span>
+            {star.hasExoplanets && (
+              <a
+                href={`https://exoplanetarchive.ipac.caltech.edu/overview/${encodeURIComponent(star.name)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="exoplanet-header-pill"
+                title={lang === 'cs' ? 'Potvrzené exoplanety v archivu NASA Exoplanet Archive (IPAC/Caltech)' : 'Confirmed exoplanets in NASA Exoplanet Archive (IPAC/Caltech)'}
+              >
+                🪐 {star.exoplanetCount} {lang === 'cs' ? 'exoplanet' : 'planets'} • NASA ↗
+              </a>
+            )}
           </div>
         </div>
         <button

@@ -171,7 +171,18 @@ export default function ComparisonModal({
                     ))}
                   </tr>
                   <tr>
-                    <td className="prop-name">{t('habitableZone')}</td>
+                    <td className="prop-name">
+                      <div className="prop-name-title">{t('habitableZone')}</div>
+                      <a
+                        href="https://arxiv.org/abs/1301.6674"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="prop-source-sublink"
+                        title="Kopparapu et al. (2013, ApJ 765:131) Habitable Zone Model"
+                      >
+                        [ Kopparapu 2013 ↗ ]
+                      </a>
+                    </td>
                     {compareStars.map((s) => {
                       const hz = calculateHabitableZone(s.lum, s.temp);
                       return (
@@ -188,7 +199,18 @@ export default function ComparisonModal({
                     ))}
                   </tr>
                   <tr>
-                    <td className="prop-name">{t('exoplanets')}</td>
+                    <td className="prop-name">
+                      <div className="prop-name-title">{t('exoplanets')}</div>
+                      <a
+                        href="https://exoplanetarchive.ipac.caltech.edu/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="prop-source-sublink"
+                        title="NASA Exoplanet Archive (IPAC / Caltech / NExScI)"
+                      >
+                        [ NASA Archive ↗ ]
+                      </a>
+                    </td>
                     {compareStars.map((s) => (
                       <td key={s.id}>
                         {s.hasExoplanets ? `🪐 ${s.exoplanetCount} ${t('planetsCount')}` : t('noneDetected')}

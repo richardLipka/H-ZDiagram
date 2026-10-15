@@ -60,6 +60,9 @@ export const translations = {
     exoticBadge: "EXOTIC OBJECT",
     blackHole: "Stellar-Mass Black Hole",
     neutronStar: "Neutron Star / Pulsar",
+    sourceLabel: "Sources",
+    hzModelSource: "Kopparapu et al. (2013) HZ Model",
+    nasaExoplanetSource: "NASA Exoplanet Archive",
 
     // Canvas & Coordinates
     axisTemp: "SURFACE TEMPERATURE T_eff (KELVIN)",
@@ -313,6 +316,9 @@ export const translations = {
     exoticBadge: "EXOTICKÝ OBJEKT",
     blackHole: "Hvězdná černá díra",
     neutronStar: "Neutronová hvězda / Pulsar",
+    sourceLabel: "Zdroje dat",
+    hzModelSource: "Model OZ Kopparapu et al. (2013)",
+    nasaExoplanetSource: "Archiv exoplanet NASA",
 
     // Canvas & Coordinates
     axisTemp: "POVRCHOVÁ TEPLOTA T_eff (KELVIN)",

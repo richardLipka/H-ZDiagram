@@ -1667,6 +1667,111 @@
   padding: 10px;
 }
 
+/* Information Sources & Citations for CHZ & Exoplanets */
+.chz-model-badge-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.chz-model-badge-link:hover {
+  background: var(--holo-cyan);
+  color: #000000;
+  box-shadow: 0 0 8px var(--holo-cyan);
+}
+
+.chz-sources-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: rgba(0, 15, 30, 0.45);
+  border: 1px dashed rgba(0, 240, 255, 0.2);
+  border-radius: 3px;
+  width: 100%;
+  box-sizing: border-box;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.chz-sources-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--text-telemetry);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.chz-sources-list {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.chz-source-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--holo-cyan);
+  background: rgba(0, 30, 60, 0.4);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  padding: 2px 5px;
+  border-radius: 2px;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.chz-source-pill:hover {
+  background: rgba(0, 240, 255, 0.2);
+  color: #ffffff;
+  border-color: var(--holo-cyan);
+}
+
+.prop-source-sublink {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  color: var(--holo-cyan);
+  text-decoration: none;
+  margin-top: 2px;
+  opacity: 0.8;
+  transition: opacity var(--transition-fast);
+}
+
+.prop-source-sublink:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.exoplanet-header-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 1px 6px;
+  border-radius: var(--radius-hud-sm);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.exoplanet-header-pill:hover {
+  background: rgba(56, 189, 248, 0.25);
+  color: #ffffff;
+  border-color: #38bdf8;
+}
+
 /* ==========================================================================
    SIMBAD Sensor Chamber & Sky Cutout
    ========================================================================== */

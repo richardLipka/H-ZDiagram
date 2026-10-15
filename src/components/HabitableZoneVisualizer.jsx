@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { temperatureToRGB } from '../simulation/blackbody';
 import { KNOWN_PLANETARY_SYSTEMS, getDetailedHabitableZone, classifyPlanetZone } from '../simulation/planetaryData';
 import { useLanguage } from '../i18n/LanguageContext';
-import { Orbit, ZoomIn, ZoomOut, Info, ShieldCheck, Snowflake, Flame } from 'lucide-react';
+import { Orbit, ZoomIn, ZoomOut, Info, ShieldCheck, Snowflake, Flame, BookOpen, Database, ExternalLink } from 'lucide-react';
 
 export default function HabitableZoneVisualizer({
   star,
@@ -106,7 +106,16 @@ export default function HabitableZoneVisualizer({
         <div className="chz-title-row">
           <Orbit size={15} className="chz-icon" />
           <span className="chz-title">{t('chzTitle')}</span>
-          <span className="chz-model-badge">Kopparapu (2013)</span>
+          <a
+            href="https://arxiv.org/abs/1301.6674"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="chz-model-badge chz-model-badge-link"
+            title="Kopparapu et al. (2013, ApJ 765:131) - Astrophysical Climate Model"
+          >
+            <span>Kopparapu (2013)</span>
+            <ExternalLink size={9} />
+          </a>
         </div>
 
         {/* Viewport Zoom Controls */}
@@ -338,6 +347,35 @@ export default function HabitableZoneVisualizer({
             </span>
           </div>
         )}
+      </div>
+
+      {/* Permanent Information Sources & Citations */}
+      <div className="chz-sources-bar">
+        <span className="chz-sources-label">{t('sourceLabel')}:</span>
+        <div className="chz-sources-list">
+          <a
+            href="https://arxiv.org/abs/1301.6674"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="chz-source-pill"
+            title="Kopparapu et al. (2013, ApJ 765:131; ApJ 787:L29) - Habitable Zones Around Main-Sequence Stars"
+          >
+            <BookOpen size={10} />
+            <span>Kopparapu et al. (2013, ApJ)</span>
+            <ExternalLink size={9} />
+          </a>
+          <a
+            href={star && star.hasExoplanets ? `https://exoplanetarchive.ipac.caltech.edu/overview/${encodeURIComponent(star.name)}` : "https://exoplanetarchive.ipac.caltech.edu/"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="chz-source-pill"
+            title="NASA Exoplanet Archive (IPAC / Caltech / NExScI)"
+          >
+            <Database size={10} />
+            <span>NASA Exoplanet Archive</span>
+            <ExternalLink size={9} />
+          </a>
+        </div>
       </div>
     </div>
   );

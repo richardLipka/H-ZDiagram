@@ -35,7 +35,16 @@
       "organization": "NASA / Caltech-IPAC",
       "url": "https://exoplanetarchive.ipac.caltech.edu/",
       "description": "Confirmed exoplanet host counts, discovery dates, and planetary system properties."
+    },
+    {
+      "name": "Habitable Zones Around Main-Sequence Stars",
+      "authors": "Kopparapu, R. K., Ramirez, R., Kasting, J. F., et al.",
+      "organization": "Penn State University / NASA Astrobiology Institute",
+      "year": 2013,
+      "bibcode": "2013ApJ...765..131K",
+      "url": "https://arxiv.org/abs/1301.6674",
+      "description": "Atmospheric climate model calculating circumstellar habitable zone limits (runaway greenhouse and maximum greenhouse solar fluxes)."
     }
   ],
-  "lastUpdated": "2026-10-14T19:04:03.148Z"
+  "lastUpdated": "2026-10-15T15:45:00.000Z"
 }
