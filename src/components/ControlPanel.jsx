@@ -136,11 +136,11 @@ export default function ControlPanel({
         </div>
       </div>
 
-      {/* Ship Telemetry Footer */}
+      {/* Astrometrics Catalog Info Footer */}
       <div className="hud-sidebar-footer">
         <div className="telemetry-bar">
           <span className="t-label">{t('dbStatus')}</span>
-          <span className="t-val">V3.8 ACTIVE</span>
+          <span className="t-val">{famousStars ? `${famousStars.length} ${t('dbStatus') === 'KATALOG:' ? 'hvězd' : 'stars'}` : '488 stars'}</span>
         </div>
         <div className="telemetry-bar">
           <span className="t-label">{t('calibration')}</span>

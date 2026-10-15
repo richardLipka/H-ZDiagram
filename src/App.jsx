@@ -4,6 +4,7 @@ import HRCanvas from './components/HRCanvas';
 import StarInspector from './components/StarInspector';
 import EvolutionSimulator from './components/EvolutionSimulator';
 import ClusterSimulator from './components/ClusterSimulator';
+import AcademySimulator from './components/AcademySimulator';
 import ComparisonModal from './components/ComparisonModal';
 import EducationalGuide from './components/EducationalGuide';
 import AttributionModal from './components/AttributionModal';
@@ -128,38 +129,6 @@ export default function App() {
     setCompareStars([]);
   };
 
-  // Quick preset loader
-  const handleApplyPreset = (presetKey) => {
-    if (!famousStars || famousStars.length === 0) return;
-
-    if (presetKey === 'sun') {
-      const sun = famousStars.find((s) => s.name.toLowerCase() === 'sol' || s.name.toLowerCase().includes('sun')) || famousStars[0];
-      if (sun) setSelectedStar(sun);
-      setFilterClass('ALL');
-      setFilterPlanetsOnly(false);
-      setActiveMode('explore');
-    } else if (presetKey === 'hypergiants') {
-      const betelgeuse = famousStars.find((s) => s.name.toLowerCase() === 'betelgeuse') || famousStars[0];
-      if (betelgeuse) setSelectedStar(betelgeuse);
-      setActiveMode('explore');
-    } else if (presetKey === 'whitedwarfs') {
-      const siriusB = famousStars.find((s) => s.name.toLowerCase().includes('sirius b') || s.spectralType.startsWith('D')) || famousStars[0];
-      if (siriusB) setSelectedStar(siriusB);
-      setFilterClass('D');
-      setActiveMode('explore');
-    } else if (presetKey === 'exoplanets') {
-      const trappist = famousStars.find((s) => s.name.toLowerCase().includes('trappist') || s.hasExoplanets) || famousStars[0];
-      if (trappist) setSelectedStar(trappist);
-      setFilterPlanetsOnly(true);
-      setActiveMode('explore');
-    } else if (presetKey === 'exotic') {
-      const exotic = famousStars.find((s) => s.id === 'cygnus_x1' || s.isExotic) || famousStars[0];
-      if (exotic) setSelectedStar(exotic);
-      setShowRelativisticRemnants(true);
-      setActiveMode('explore');
-    }
-  };
-
   const isSelectedInCompare = selectedStar && compareStars.some((s) => s.id === selectedStar.id);
 
   if (isLoadingData) {
@@ -178,7 +147,6 @@ export default function App() {
       <Header
         activeMode={activeMode}
         setActiveMode={setActiveMode}
-        onApplyPreset={handleApplyPreset}
         onOpenGuide={() => setIsGuideOpen(true)}
         onOpenAttribution={() => setIsAttributionOpen(true)}
       />
@@ -252,6 +220,15 @@ export default function App() {
               clusterAgeGyr={clusterAgeGyr}
               onChangeClusterAge={setClusterAgeGyr}
               clusterIsochrone={clusterIsochrone}
+            />
+          )}
+
+          {/* Astrometrics Academy Gamified Missions Drawer if active */}
+          {activeMode === 'academy' && (
+            <AcademySimulator
+              selectedStar={selectedStar}
+              onSelectStar={setSelectedStar}
+              famousStars={famousStars}
             />
           )}
         </div>

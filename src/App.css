@@ -2040,3 +2040,300 @@
   }
 }
 
+/* ==========================================================================
+   ASTROMETRICS ACADEMY GAMIFIED MISSIONS DRAWER
+   ========================================================================== */
+.academy-drawer {
+  background: rgba(2, 6, 18, 0.95);
+  backdrop-filter: blur(16px);
+  border-top: 2px solid #10b981;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(16, 185, 129, 0.2);
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 25;
+  max-height: 42vh;
+  overflow-y: auto;
+}
+
+.academy-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.25);
+  padding-bottom: 8px;
+}
+
+.academy-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.academy-title {
+  font-family: var(--font-hud);
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.06em;
+}
+
+.trophy-icon {
+  color: #10b981;
+}
+
+.academy-progress-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 2px 8px;
+  border-radius: var(--radius-hud-sm);
+}
+
+.academy-xp-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.academy-xp {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.xp-icon {
+  color: #fbbf24;
+}
+
+.academy-reset-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-telemetry);
+  border-radius: var(--radius-hud-sm);
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.academy-reset-btn:hover {
+  border-color: #f43f5e;
+  color: #f43f5e;
+}
+
+.mission-stepper {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mission-step-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(0, 15, 35, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-hud-sm);
+  color: var(--text-ice-white);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.mission-step-pill:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.mission-step-pill.active {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: #10b981;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+.mission-step-pill.done {
+  border-color: #10b981;
+  color: #10b981;
+}
+
+.mission-content {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .mission-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mission-body h4 {
+  font-family: var(--font-hud);
+  font-size: 13px;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.mission-instruction {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #cbd5e1;
+  margin-bottom: 8px;
+}
+
+.mission-actions-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.mission-hint-btn, .mission-guide-jump-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: rgba(0, 20, 45, 0.6);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: var(--radius-hud-sm);
+  color: var(--holo-cyan);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.mission-hint-btn:hover, .mission-guide-jump-btn:hover {
+  background: rgba(0, 240, 255, 0.2);
+  border-color: var(--holo-cyan);
+  color: #ffffff;
+}
+
+.mission-hint-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px dashed rgba(0, 240, 255, 0.4);
+  border-radius: var(--radius-hud-sm);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #93c5fd;
+  line-height: 1.4;
+}
+
+.mission-status-readout {
+  background: rgba(0, 15, 35, 0.7);
+  border: 1px solid var(--hud-border-dim);
+  border-radius: var(--radius-hud-sm);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.readout-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-telemetry);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.readout-star {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: #ffffff;
+}
+
+.readout-success {
+  color: #10b981;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.readout-empty {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+}
+
+.academy-completion-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid #10b981;
+  border-radius: var(--radius-hud-sm);
+}
+
+.cert-trophy {
+  color: #fbbf24;
+  flex-shrink: 0;
+}
+
+.cert-text h3 {
+  font-family: var(--font-hud);
+  font-size: 14px;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.cert-text p {
+  font-size: 12px;
+  color: #e2e8f0;
+  margin-bottom: 6px;
+}
+
+.cert-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.2);
+  padding: 2px 8px;
+  border-radius: var(--radius-hud-sm);
+}
+
+.academy-toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(16, 185, 129, 0.95);
+  color: #000000;
+  font-family: var(--font-hud);
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: var(--radius-hud-sm);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+  animation: pulseToast 0.3s ease-out;
+}
+
+@keyframes pulseToast {
+  from { transform: translateY(6px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+

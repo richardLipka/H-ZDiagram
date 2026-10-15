@@ -199,7 +199,7 @@ export default function HRCanvas({
       const msLabel = coords.toCanvas(5800, 1.2);
       ctx.fillStyle = 'rgba(0, 240, 255, 0.85)';
       ctx.font = '700 11px "Orbitron", sans-serif';
-      ctx.fillText(lang === 'cs' ? 'HLAVNÍ POSLOUPNOST // TŘÍDA V' : 'MAIN SEQUENCE // CLASS V', msLabel.x + 45, msLabel.y + 25);
+      ctx.fillText(lang === 'cs' ? 'HLAVNÍ POSLOUPNOST (TŘÍDA V)' : 'MAIN SEQUENCE (CLASS V)', msLabel.x + 45, msLabel.y + 25);
 
       ctx.restore();
     }
@@ -280,8 +280,8 @@ export default function HRCanvas({
         ctx.textAlign = 'left';
         ctx.fillText(
           lang === 'cs'
-            ? '// NEROZLIŠENÉ FYZICKÉ DVOJHVEZDY [ +0,75 MAG / 2× L☉ ]'
-            : '// UNRESOLVED EQUAL-MASS BINARIES [ -0.75 MAG / 2× L☉ ]',
+            ? 'Nerozlišené fyzické dvojhvězdy (+0,75 mag / 2× L☉)'
+            : 'Unresolved Equal-Mass Binaries (-0.75 mag / 2× L☉)',
           binLabelPos.x + 8,
           binLabelPos.y - 6
         );
@@ -311,8 +311,8 @@ export default function HRCanvas({
         ctx.textAlign = 'left';
         ctx.fillText(
           lang === 'cs'
-            ? '// GAIA DR3: JAO GAP [ 0,35 M☉ MEZ PLRÉHO PROCHLAZOVÁNÍ A PLNÉ KONVEKCE ]'
-            : '// GAIA DR3: JAO GAP [ 0.35 M☉ FULLY CONVECTIVE CORE BOUNDARY ]',
+            ? 'Gaia DR3: Jao Gap (0,35 M☉, mez plné konvekce)'
+            : 'Gaia DR3: Jao Gap (0.35 M☉ fully convective core boundary)',
           jaoPos.x + 52,
           jaoPos.y + 3
         );
@@ -332,8 +332,8 @@ export default function HRCanvas({
         ctx.textAlign = 'center';
         ctx.fillText(
           lang === 'cs'
-            ? '// KRYSTALIZACE JÁDRA C/O (VĚTEV Q) //'
-            : '// COULOMB C/O CRYSTALLIZATION (Q-BRANCH) //',
+            ? 'Krystalizace jádra C/O (větev Q)'
+            : 'Coulomb C/O Crystallization (Q-Branch)',
           wdCrystPos.x,
           wdCrystPos.y + 3
         );
@@ -364,7 +364,7 @@ export default function HRCanvas({
         ctx.fillStyle = '#e9d5ff';
         ctx.textAlign = 'center';
         ctx.fillText(
-          lang === 'cs' ? 'NEUTRONOVÉ HVĚZDY // PULSARY' : 'NEUTRON STARS // PULSARS',
+          lang === 'cs' ? 'NEUTRONOVÉ HVĚZDY (PULSARY)' : 'NEUTRON STARS (PULSARS)',
           nsPos.x,
           nsPos.y - 2
         );
@@ -391,8 +391,8 @@ export default function HRCanvas({
         ctx.textAlign = 'left';
         ctx.fillText(
           lang === 'cs'
-            ? '// AKREČNÍ DISK ČERNÉ DÍRY [ CYGNUS X-1 // T ~ 10^7 K ]'
-            : '// BLACK HOLE ACCRETION DISK [ CYGNUS X-1 // T ~ 10^7 K ]',
+            ? 'Akreční disk černé díry (Cygnus X-1, T ~ 10^7 K)'
+            : 'Black Hole Accretion Disk (Cygnus X-1, T ~ 10^7 K)',
           bhPos.x + 28,
           bhPos.y + 4
         );
@@ -404,8 +404,8 @@ export default function HRCanvas({
       ctx.textAlign = 'right';
       ctx.fillText(
         lang === 'cs'
-          ? 'LIMIT: CHANDRASEKHAR (1,44 M☉) | TOV (~2,16 M☉ -> SINGULARITA)'
-          : 'LIMITS: CHANDRASEKHAR (1.44 M☉) | TOV (~2.16 M☉ -> SINGULARITY)',
+          ? 'Meze: Chandrasekhar 1,44 M☉ | TOV ~2,16 M☉'
+          : 'Limits: Chandrasekhar 1.44 M☉ | TOV ~2.16 M☉',
         plotRight - 12,
         plotBottom - 10
       );
@@ -761,14 +761,14 @@ export default function HRCanvas({
       ctx.arc(pos.x, pos.y, dotRadius * 0.4, 0, Math.PI * 2);
       ctx.fill();
 
-      // Tactical Label
-      if (showFamousLabels || isSelected || isHovered || star.name === 'Sol' || star.name === 'Sirius' || star.name === 'Betelgeuse') {
+      // Star Name Label
+      if (showFamousLabels || isSelected || isHovered) {
         ctx.font = isSelected ? '700 11px "JetBrains Mono", monospace' : '500 10px "JetBrains Mono", monospace';
         ctx.fillStyle = isSelected ? '#00f0ff' : '#ffffff';
         ctx.shadowColor = '#000000';
         ctx.shadowBlur = 4;
         ctx.textAlign = 'left';
-        ctx.fillText(`// ${star.name.toUpperCase()}`, pos.x + dotRadius + 8, pos.y + 3);
+        ctx.fillText(star.name, pos.x + dotRadius + 8, pos.y + 3);
       }
     }
     ctx.restore();
@@ -819,8 +819,8 @@ export default function HRCanvas({
     ctx.textAlign = 'center';
     ctx.fillText(
       lang === 'cs'
-        ? '◄ HORKÉ [ MODRÉ ] ──── EFEKTIVNÍ POVRCHOVÁ TEPLOTA (KELVIN) ──── CHLADNÉ [ ČERVENÉ ] ►'
-        : '◄ HOTTER [ BLUE ] ──── EFFECTIVE SURFACE TEMPERATURE (KELVIN) ──── COOLER [ RED ] ►',
+        ? '◄ HORKÉ (MODRÉ) ──── EFEKTIVNÍ POVRCHOVÁ TEPLOTA (KELVIN) ──── CHLADNÉ (ČERVENÉ) ►'
+        : '◄ HOT (BLUE) ──── EFFECTIVE SURFACE TEMPERATURE (KELVIN) ──── COOL (RED) ►',
       plotLeft + plotW / 2,
       height - 12
     );
@@ -828,8 +828,8 @@ export default function HRCanvas({
     // Top Axis: Spectral Classification
     ctx.fillText(
       lang === 'cs'
-        ? 'HARVARDSKÁ SPEKTRÁLNÍ KLASIFIKACE // TEPLOTNÍ INDEX'
-        : 'HARVARD SPECTRAL CLASSIFICATION // THERMAL INDEX',
+        ? 'HARVARDSKÁ SPEKTRÁLNÍ KLASIFIKACE'
+        : 'HARVARD SPECTRAL CLASSIFICATION',
       plotLeft + plotW / 2,
       22
     );
@@ -840,8 +840,8 @@ export default function HRCanvas({
     ctx.rotate(-Math.PI / 2);
     ctx.fillText(
       lang === 'cs'
-        ? 'LUMINOSITA / VÝKON (L / L☉) [LOGARITMICKÁ TELEMETRIE]'
-        : 'LUMINOSITY (L / L☉) [LOGARITHMIC TELEMETRY]',
+        ? 'LUMINOSITA (L / L☉)'
+        : 'LUMINOSITY (L / L☉)',
       0,
       0
     );
@@ -853,8 +853,8 @@ export default function HRCanvas({
     ctx.rotate(Math.PI / 2);
     ctx.fillText(
       lang === 'cs'
-        ? 'ABSOLUTNÍ VIZUÁLNÍ MAGNITUDA (Mv) [PŘEVRÁCENÝ TOK]'
-        : 'ABSOLUTE VISUAL MAGNITUDE (Mv) [INVERTED FLUX]',
+        ? 'ABSOLUTNÍ VIZUÁLNÍ MAGNITUDA (Mv)'
+        : 'ABSOLUTE VISUAL MAGNITUDE (Mv)',
       0,
       0
     );
@@ -1009,15 +1009,13 @@ export default function HRCanvas({
         onWheel={handleWheel}
       />
 
-      {/* Astrometrics Tactical Telemetry Overlay in corners */}
+      {/* Interactive Canvas Guide & Zoom */}
       <div className="canvas-telemetry-tl">
-        <span className="telemetry-item">{t('sectorLabel')}</span>
-        <span className="telemetry-item">{t('gridLabel')}</span>
+        <span className="telemetry-item">{lang === 'cs' ? 'Posun: táhněte myší • Přiblížení: kolečko / tlačítka' : 'Pan: drag canvas • Zoom: wheel / buttons'}</span>
       </div>
 
       <div className="canvas-telemetry-br">
         <span className="telemetry-item">{t('zoomLabel')} {zoom.toFixed(2)}x</span>
-        <span className="telemetry-item">{t('panLabel')} [{pan.x.toFixed(0)}, {pan.y.toFixed(0)}]</span>
       </div>
 
       {/* Floating Canvas Tactical Controls */}

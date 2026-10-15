@@ -189,14 +189,14 @@ export default function StarInspector({
           {isShowingSimbad ? (
             <span className="simbad-source-badge">
               <ImageIcon size={10} />
-              {simbadData.isSolarSpecial ? 'NASA SDO AIA // Solar Photosphere' : 'CDS Strasbourg SIMBAD // DSS2 Color Cutout'}
+              {simbadData.isSolarSpecial ? 'NASA SDO AIA • Solar Photosphere' : 'CDS Strasbourg SIMBAD • DSS2 Cutout'}
             </span>
           ) : (
             <span className="color-temp-badge hud-temp-badge" style={{ borderColor: rgb.css, color: '#ffffff' }}>
               {star.temp.toLocaleString()} K • {t('classLabel')} {star.spectralType}
             </span>
           )}
-          <span className="stage-text hud-stage-text">// {translateStageName(star.evolutionaryStage).toUpperCase()}</span>
+          <span className="stage-text hud-stage-text">{translateStageName(star.evolutionaryStage)}</span>
         </div>
 
         {/* SIMBAD Real Astronomical Telemetry (If Available) */}

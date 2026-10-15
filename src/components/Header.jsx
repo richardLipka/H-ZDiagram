@@ -1,11 +1,10 @@
 import React from 'react';
-import { Telescope, Orbit, Clock, Layers, BookOpen, Database, Home, ExternalLink, Globe } from 'lucide-react';
+import { Telescope, Orbit, Clock, Layers, BookOpen, Database, Globe, GraduationCap } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 
 export default function Header({
   activeMode,
   setActiveMode,
-  onApplyPreset,
   onOpenGuide,
   onOpenAttribution
 }) {
@@ -13,32 +12,23 @@ export default function Header({
 
   return (
     <header className="app-header hud-header">
-      {/* Astrometrics Department Brand */}
+      {/* Brand Title */}
       <div className="header-brand">
-        <a
-          href="https://home.zcu.cz/~lipka/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="brand-reticle"
-          title="Created by Richard Lipka – Visit Home Page"
-        >
-          <img src="./favicon.svg" alt="H-R Astrometrics Logo" className="brand-logo-img" width="24" height="24" />
-        </a>
+        <div className="brand-reticle">
+          <img src="./favicon.svg" alt="H-R Diagram Logo" className="brand-logo-img" width="26" height="26" />
+        </div>
         <div className="brand-text">
-          <div className="brand-top-row">
-            <span className="ship-designation">{t('shipDesignation')}</span>
-            <span className="hud-badge pulse">{t('sensorsOnline')}</span>
-          </div>
-          <h1>{t('appTitle').toUpperCase()}</h1>
-          <span className="brand-subtitle">{t('appSubtitle').toUpperCase()}</span>
+          <h1>{t('appTitle')}</h1>
+          <span className="brand-subtitle">{t('appSubtitle')}</span>
         </div>
       </div>
 
-      {/* Tactical Mode Navigation */}
+      {/* Mode Navigation */}
       <nav className="header-nav hud-nav">
         <button
           className={`nav-btn hud-btn ${activeMode === 'explore' ? 'active' : ''}`}
           onClick={() => setActiveMode('explore')}
+          title={lang === 'cs' ? 'Prohlížet hvězdy v diagramu' : 'Explore stars in diagram'}
         >
           <Telescope size={15} />
           <span>{t('navExplore')}</span>
@@ -47,6 +37,7 @@ export default function Header({
         <button
           className={`nav-btn hud-btn ${activeMode === 'evolution' ? 'active' : ''}`}
           onClick={() => setActiveMode('evolution')}
+          title={lang === 'cs' ? 'Simulace vývoje hvězd' : 'Stellar Evolution Tracks'}
         >
           <Orbit size={15} />
           <span>{t('navEvolution')}</span>
@@ -55,14 +46,25 @@ export default function Header({
         <button
           className={`nav-btn hud-btn ${activeMode === 'cluster' ? 'active' : ''}`}
           onClick={() => setActiveMode('cluster')}
+          title={lang === 'cs' ? 'Datování hvězdokup a izochrony' : 'Cluster Dating & Isochrones'}
         >
           <Clock size={15} />
           <span>{t('navClusters')}</span>
         </button>
 
         <button
+          className={`nav-btn hud-btn ${activeMode === 'academy' ? 'active' : ''}`}
+          onClick={() => setActiveMode('academy')}
+          title={lang === 'cs' ? 'Astrometrická akademie: Výukové mise a úkoly' : 'Astrometrics Academy: Interactive Challenges'}
+        >
+          <GraduationCap size={15} />
+          <span>{t('navAcademy')}</span>
+        </button>
+
+        <button
           className={`nav-btn hud-btn ${activeMode === 'compare' ? 'active' : ''}`}
           onClick={() => setActiveMode('compare')}
+          title={lang === 'cs' ? 'Srovnávač parametrů hvězd' : 'Compare Stellar Parameters'}
         >
           <Layers size={15} />
           <span>{t('navCompare')}</span>
@@ -71,7 +73,7 @@ export default function Header({
         <button
           className="nav-btn hud-btn guide-btn"
           onClick={onOpenGuide}
-          title={lang === 'cs' ? 'Otevřít astrofyzikální návod a průvodce' : 'Open Astrometrics Manual & Guide'}
+          title={lang === 'cs' ? 'Otevřít astrofyzikální návod' : 'Open Educational Guide'}
         >
           <BookOpen size={15} />
           <span>{t('navManual')}</span>
@@ -80,23 +82,11 @@ export default function Header({
         <button
           className="nav-btn hud-btn data-btn"
           onClick={onOpenAttribution}
-          title={lang === 'cs' ? 'Zobrazit zdroje dat a katalogů' : 'View Satellite / Catalog Telemetry Sources'}
+          title={lang === 'cs' ? 'Zdroje dat a katalogů' : 'View Data Sources & Attribution'}
         >
           <Database size={15} />
           <span>{t('navDataFeed')}</span>
         </button>
-
-        <a
-          href="https://home.zcu.cz/~lipka/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="nav-btn hud-btn author-btn"
-          title="Richard Lipka – University Homepage & Research"
-        >
-          <Home size={15} />
-          <span>{t('navAuthor')}</span>
-          <ExternalLink size={11} style={{ opacity: 0.6 }} />
-        </a>
 
         {/* Bilingual Language Switcher */}
         <button
@@ -108,17 +98,6 @@ export default function Header({
           <span>{t('navLangToggle')}</span>
         </button>
       </nav>
-
-      {/* Tactical Astrometrics Jump Coordinates */}
-      <div className="header-presets hud-presets">
-        <span className="preset-label">{t('targetJump')}</span>
-        <button className="preset-chip hud-chip" onClick={() => onApplyPreset('sun')}>{t('presetSun')}</button>
-        <button className="preset-chip hud-chip" onClick={() => onApplyPreset('hypergiants')}>{t('presetBetelgeuse')}</button>
-        <button className="preset-chip hud-chip" onClick={() => onApplyPreset('whitedwarfs')}>{t('presetSiriusB')}</button>
-        <button className="preset-chip hud-chip" onClick={() => onApplyPreset('exoplanets')}>{t('presetExoplanets')}</button>
-        <button className="preset-chip hud-chip exotic-chip" onClick={() => onApplyPreset('exotic')}>{t('presetExotic')}</button>
-      </div>
     </header>
   );
 }
-

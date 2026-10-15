@@ -94,8 +94,8 @@ export async function fetchSimbadData(star) {
     const ra = parseFloat(jMatch[1]);
     const dec = parseFloat(jMatch[2]);
 
-    // CDS Aladin HiPS2FITS cutout endpoint for true DSS2 color sky imagery
-    const imageUrl = `https://alasky.cds.unistra.fr/hips-image-services/hips2fits?hips=CDS/P/DSS2/color&width=240&height=240&fov=0.08&ra=${ra}&dec=${dec}&format=jpg`;
+    // CDS Aladin HiPS2FITS cutout endpoint with wide field-of-view (0.28 deg) capturing surroundings
+    const imageUrl = `https://alasky.cds.unistra.fr/hips-image-services/hips2fits?hips=CDS/P/DSS2/color&width=240&height=240&fov=0.28&ra=${ra}&dec=${dec}&format=jpg`;
 
     const simbadData = {
       available: true,
