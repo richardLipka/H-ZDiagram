@@ -1,19 +1,13 @@
 /**
  * Stellar Spectroscopy & Core Nucleosynthesis Physics Engine
  * 
- * Accurately models:
- * 1. Continuous Planck Blackbody Radiation across optical spectrum (380 - 750 nm)
- * 2. Quantum absorption & emission line profiles (Balmer H, He I/II, Ca II, Na D, Mg b, Fe, TiO, C2)
- * 3. Core thermonuclear reaction chains (p-p chain, CNO cycle, 3-alpha, advanced shell burning)
- * 4. Internal stellar structure (radiative vs. convective zones based on mass & virial temperature)
- * 5. Chemical dredge-up & nucleosynthetic ash mixing
- * 
- * Supported by authoritative astronomical spectral libraries and nucleosynthesis references:
- * - Pickles, A. J. (1998, PASP 110:863): A Stellar Spectral Flux Library
- * - Jacoby, G. H. et al. (1984, ApJS 56:257): A Library of Stellar Spectra
- * - ESO UVES Paranal High-Resolution Spectral Library (Bagnulo et al. 2003)
- * - Burbidge, Burbidge, Fowler & Hoyle (B2FH, 1957, Rev. Mod. Phys. 29:547)
- * - Bethe, H. A. (1939, Phys. Rev. 55:434): Energy Production in Stars
+ * Educational model of a stellar optical spectrum and of the energy source in the core:
+ * 1. Planck continuum B_λ(T) across the visible range (380–750 nm);
+ * 2. schematic strengths of prominent absorption features whose maxima follow the
+ *    MK spectral sequence (Balmer lines peak near A0, He I near B2, He II in O stars,
+ *    Ca II H & K and metal lines in G–K stars, TiO bands in M stars; see Gray &
+ *    Corbally 2009, Stellar Spectral Classification) — not a radiative-transfer model;
+ * 3. the dominant nuclear process and internal structure for the star's evolutionary stage.
  */
 
 // Wavelength to RGB conversion (380 nm - 750 nm)
@@ -117,7 +111,7 @@ export const PROMINENT_SPECTRAL_LINES = [
     wavelengthNm: 438.35,
     element: 'Iron (Fe)',
     ionization: 'Fe I',
-    transition: 'z ⁵G° → e ⁵F',
+    transition: 'Fe I multiplet 41',
     peakType: ['G', 'K', 'M'],
     description: 'Neutral iron metallic absorption line; indicator of stellar metallicity [Fe/H].',
     descriptionCs: 'Absorpční čára neutrálního železa; klíčový indikátor metalicity [Fe/H].',
@@ -155,8 +149,8 @@ export const PROMINENT_SPECTRAL_LINES = [
     ionization: 'H I',
     transition: 'n = 2 → 4',
     peakType: ['A', 'B', 'F'],
-    description: 'Classic Fraunhofer F line; primary diagnostic for stellar temperature and surface gravity.',
-    descriptionCs: 'Klasická Fraunhoferova čára F; primární diagnostika teploty a povrchové gravitace.',
+    description: 'Fraunhofer F line; its strength and width are key diagnostics of temperature and surface gravity.',
+    descriptionCs: 'Fraunhoferova čára F; její síla a šířka jsou klíčovou diagnostikou teploty a povrchové gravitace.',
     type: 'absorption'
   },
   {
@@ -167,8 +161,8 @@ export const PROMINENT_SPECTRAL_LINES = [
     ionization: 'Molecule',
     transition: 'α-system (C ³Δ - X ³Δ)',
     peakType: ['M', 'K'],
-    description: 'Broad molecular absorption band characteristic of cool red dwarfs & red supergiants.',
-    descriptionCs: 'Široký molekulární absorpční pás typický pro chladné červené trpaslíky a veleobry.',
+    description: 'Molecular absorption band characteristic of cool M-type stars (red dwarfs, giants and supergiants).',
+    descriptionCs: 'Molekulární absorpční pás typický pro chladné hvězdy třídy M (červené trpaslíky, obry i veleobry).',
     type: 'molecular'
   },
   {
@@ -215,8 +209,8 @@ export const PROMINENT_SPECTRAL_LINES = [
     ionization: 'H I',
     transition: 'n = 2 → 3',
     peakType: ['A', 'B', 'F'],
-    description: 'Prominent deep red hydrogen line (Fraunhofer C). Hallmark of active stellar photospheres and nebulae.',
-    descriptionCs: 'Výrazná červená vodíková čára (Fraunhoferovo C). Znak hvězdných fotosfér a emisních mlhovin.',
+    description: 'Red Balmer line of hydrogen (Fraunhofer C). In emission it marks chromospheric activity and ionized nebulae.',
+    descriptionCs: 'Červená Balmerova čára vodíku (Fraunhoferova čára C). V emisi prozrazuje chromosférickou aktivitu a ionizované mlhoviny.',
     type: 'absorption'
   },
   {
@@ -234,257 +228,320 @@ export const PROMINENT_SPECTRAL_LINES = [
 ];
 
 /**
- * Calculates physical line absorption strength (0.0 to 1.0) using temperature & Saha-Boltzmann excitation
+ * Schematic strength (0–1) of a line or band at temperature T. Gaussian-like
+ * curves placed at the temperatures where each feature is strongest.
  */
 export function calculateLineStrength(line, temp, _spectralType = 'G', lumClass = 'V') {
   const t = Math.max(1000, temp);
-  // Luminosity class modulation: Supergiants (I) have narrower lines with slightly less pressure broadening
-  const isSupergiant = lumClass === 'I' || lumClass === 'Ia' || lumClass === 'Ib';
-  const lumFactor = isSupergiant ? 0.9 : 1.0;
+  // Supergiants: lower pressure, slightly weaker pressure-broadened lines
+  const lumFactor = lumClass === 'I' ? 0.9 : 1.0;
 
-  // 1. Hydrogen Balmer lines: peak sharply at ~9500 K (A0V stars), drop at low and high T
+  // Hydrogen Balmer lines: strongest near A0–A2 (~9,500 K)
   if (line.id.startsWith('h_')) {
-    // Excitation of n=2 level (Boltzmann) and ionization of H (Saha)
-    const deltaT = Math.abs(t - 9500);
-    const strength = Math.exp(-Math.pow(deltaT / 3400, 2)) * lumFactor;
+    const strength = Math.exp(-(((t - 9500) / 3400) ** 2)) * lumFactor;
     return Math.max(0.08, Math.min(0.92, strength));
   }
-
-  // 2. Helium I lines: peak at ~18,000 K (B-type)
+  // He I: strongest near B2 (~20,000 K), absent in cool stars
   if (line.id.startsWith('he1_')) {
-    const deltaT = Math.abs(t - 18000);
-    const strength = Math.exp(-Math.pow(deltaT / 5000, 2));
-    return t < 8000 ? 0.0 : Math.min(0.85, strength);
+    if (t < 9000) return 0.0;
+    return Math.min(0.85, Math.exp(-(((t - 20000) / 6000) ** 2)));
   }
-
-  // 3. Helium II lines: peak above 32,000 K (O-type)
+  // He II: only in O stars (≳ 30,000 K)
   if (line.id.startsWith('he2_')) {
-    if (t < 25000) return 0.0;
-    return Math.min(0.9, (t - 25000) / 20000);
+    if (t < 28000) return 0.0;
+    return Math.min(0.9, (t - 28000) / 15000);
   }
-
-  // 4. Ionized Calcium Ca II H & K: peak at ~5000 - 6500 K (F, G, K)
+  // Ca II H & K: strongest in G–K stars
   if (line.id.startsWith('ca2_')) {
-    const deltaT = Math.abs(t - 5200);
-    const strength = Math.exp(-Math.pow(deltaT / 2200, 2));
-    return Math.max(0.05, Math.min(0.95, strength));
+    return Math.max(0.05, Math.min(0.95, Math.exp(-(((t - 5000) / 2200) ** 2))));
   }
-
-  // 5. Sodium D doublet: increases continuously towards cooler stars (T < 6000 K)
+  // Na I D: grows towards cooler stars
   if (line.id.startsWith('na1_')) {
     if (t > 8500) return 0.05;
     return Math.min(0.92, 0.15 + 0.8 * Math.exp(-(t - 3000) / 2500));
   }
-
-  // 6. Magnesium I b: peaks around 5000 K
+  // Mg I b: strongest in G–K stars
   if (line.id.startsWith('mg1_')) {
-    const deltaT = Math.abs(t - 5200);
-    const strength = Math.exp(-Math.pow(deltaT / 2400, 2));
-    return Math.min(0.88, strength);
+    return Math.min(0.88, Math.exp(-(((t - 5000) / 2400) ** 2)));
   }
-
-  // 7. Neutral Iron: peaks around 4500 - 6000 K
+  // Neutral iron: strongest in G–K stars
   if (line.id.startsWith('fe1_')) {
-    const deltaT = Math.abs(t - 5500);
-    return Math.min(0.82, Math.exp(-Math.pow(deltaT / 2500, 2)));
+    return Math.min(0.82, Math.exp(-(((t - 5200) / 2500) ** 2)));
   }
-
-  // 8. Titanium Oxide molecules: dissociate completely above ~4000 K!
+  // TiO bands: appear in late K and dominate M stars
   if (line.id.startsWith('tio_')) {
     if (t > 4100) return 0.0;
-    return Math.min(0.95, Math.pow((4100 - t) / 1600, 1.5));
+    return Math.min(0.95, ((4100 - t) / 1600) ** 1.5);
   }
-
   return 0.3;
 }
 
 /**
- * Calculates continuous Planck blackbody flux B_lambda(T) normalized to [0, 1]
+ * Planck spectral radiance B_λ(T) in W·sr⁻¹·m⁻³.
  */
 export function calculatePlanckFlux(wavelengthNm, temp) {
-  const wMeters = wavelengthNm * 1e-9;
-  const h = 6.62607015e-34; // Planck constant (J*s)
-  const c = 2.99792458e8;    // Speed of light (m/s)
-  const k = 1.380649e-23;    // Boltzmann constant (J/K)
+  const w = wavelengthNm * 1e-9;
+  const h = 6.62607015e-34; // Planck constant (J s)
+  const c = 2.99792458e8; // speed of light (m/s)
+  const k = 1.380649e-23; // Boltzmann constant (J/K)
+  const x = (h * c) / (w * k * Math.max(500, temp));
+  if (x > 700) return 0;
+  return (2 * h * c * c) / (w ** 5 * Math.expm1(x));
+}
 
-  const exponent = (h * c) / (wMeters * k * Math.max(800, temp));
-  if (exponent > 80) return 1e-6; // prevent numerical overflow
+// Present-day solar photospheric mass fractions (Asplund et al. 2009, ARA&A 47, 481)
+const SOLAR_XYZ = { X: 0.7381, Y: 0.2485, Z: 0.0134 };
 
-  const intensity = (2 * h * c * c) / (Math.pow(wMeters, 5) * (Math.exp(exponent) - 1));
-  return intensity;
+/**
+ * Evolutionary phase of a catalogue star or of a simulated evolution state.
+ */
+export function classifyPhase(star) {
+  const stage = (star.evolutionaryStage || star.stage || '').toLowerCase();
+  const spec = (star.spectralType || '').toUpperCase();
+  const lc = star.luminosityClass;
+  if (star.noPhotosphere || stage.includes('black hole')) return 'black_hole';
+  if (lc === 'NS' || stage.includes('neutron star')) return 'neutron_star';
+  if (stage.includes('supernova') || stage.includes('core collapse')) return 'supernova';
+  if (lc === 'D' || spec.startsWith('D') || stage.includes('white dwarf')) return 'white_dwarf';
+  if (stage.includes('protostar') || stage.includes('pre-main') || stage.includes('accret')) return 'pre_main_sequence';
+  if (stage.includes('planetary nebula') || stage.includes('envelope ejection')) return 'post_agb';
+  if (stage.includes('asymptotic') || stage.includes('agb')) return 'agb';
+  if (stage.includes('helium') || stage.includes('horizontal') || stage.includes('blue loop')) return 'core_helium';
+  if (stage.includes('terminal-age') || stage.includes('final evolution')) return 'shell_hydrogen';
+  if (stage.includes('main sequence') || stage.includes('zams') || stage.includes('sun today')) return 'main_sequence';
+  if (stage.includes('subgiant') || stage.includes('red giant branch') || stage.includes('hertzsprung')) return 'shell_hydrogen';
+  if (lc === 'V') return 'main_sequence';
+  // Hot B-type giants and subgiants are mostly still burning hydrogen in the core
+  if ((lc === 'III' || lc === 'IV') && (star.temp || 0) > 10000) return 'main_sequence';
+  if (lc === 'I' || lc === 'II' || stage.includes('supergiant')) return 'supergiant';
+  if (lc === 'IV') return 'shell_hydrogen';
+  return 'giant';
 }
 
 /**
- * Detailed Core Fusion & Nucleosynthesis Analysis for any star
+ * Dominant energy source, internal structure and surface composition.
+ * All texts are returned in the requested language.
  */
 export function analyzeCoreFusionAndComposition(star, lang = 'en') {
   if (!star) return null;
-  const isCs = lang === 'cs';
+  const cs = lang === 'cs';
+  const L = (en, czech) => (cs ? czech : en);
+  const mass = star.mass || null;
+  const radius = star.radius || null;
+  const phase = classifyPhase(star);
+  let composition = SOLAR_XYZ;
+  let compositionNote = L('Assumed solar composition (Asplund et al. 2009)', 'Předpokládáno sluneční složení (Asplund a kol. 2009)');
+  let r;
 
-  const mass = star.mass || 1.0;
-  const lum = star.lum || 1.0;
-  const temp = star.temp || 5778;
-  const radius = star.radius || 1.0;
-  const stage = (star.evolutionaryStage || '').toLowerCase();
-  const spec = (star.spectralType || '').toUpperCase();
-
-  // Virial estimate of central core temperature and pressure
-  const coreTempMK = parseFloat(((15.7 * (mass / Math.max(0.01, radius)))).toFixed(1));
-  const corePressurePetaPascal = parseFloat((1.3e4 * Math.pow(mass / Math.max(0.01, radius), 2)).toFixed(0));
-
-  let fusionType = '';
-  let fusionDesc = '';
-  let coreZoneStructure = '';
-  let compositionH = 0.73;
-  let compositionHe = 0.25;
-  let compositionMetals = 0.02;
-  let dredgeUpStatus = '';
-  let scientificCitation = '';
-  let primaryReactionFormula = '';
-
-  if (star.isExotic || stage.includes('black hole')) {
-    fusionType = isCs ? 'Gravitační singularita (žádná fúze)' : 'Gravitational Singularity (Fusion Terminated)';
-    fusionDesc = isCs
-      ? 'Hvězdný kolaps překonal tlak degenerovaných neutronů (TOV mez > 2,16 M☉). Hmota je stlačena do singularity za horizontem událostí.'
-      : 'Stellar collapse exceeded neutron degeneracy pressure (TOV limit > 2.16 M☉). Mass is compressed beyond the event horizon.';
-    coreZoneStructure = isCs ? 'Horizont událostí • Akreční disk' : 'Event Horizon • Accretion Disk';
-    primaryReactionFormula = 'Gμν = 8πTμν (Einstein GR Singularity)';
-    scientificCitation = 'Oppenheimer & Snyder (1939, Phys. Rev. 56:455)';
-    compositionH = 0.0;
-    compositionHe = 0.0;
-    compositionMetals = 1.0;
-  } else if (stage.includes('white dwarf') || spec.startsWith('D')) {
-    fusionType = isCs ? 'Uhlíko-kyslíková elektronová degenerace' : 'C/O Electron Degeneracy Pressure';
-    fusionDesc = (isCs
-      ? 'Vyhaslé jádro bývalého obra. Termonukleární fúze ustala; proti gravitaci působí tlak Fermiho degenerovaného elektronového plynu.'
-      : 'Extinguished stellar remnant. Nuclear fusion has ceased; supported exclusively by quantum Fermi electron degeneracy pressure.') +
-      (isCs
-        ? ` Teplota ${Math.round(temp)} K odpovídá postupnému chladnutí podle Mestelova zákona.`
-        : ` Surface temperature ${Math.round(temp)} K reflects secular cooling under Mestel's law.`);
-    coreZoneStructure = isCs ? 'Degenerované jádro C/O • Krystalická mřížka' : 'Degenerate C/O Core • Coulomb Crystal Lattice';
-    primaryReactionFormula = 'P_deg ∝ ρ^(5/3) (Non-relativistic Fermi Gas)';
-    scientificCitation = 'Chandrasekhar, S. (1931, ApJ 74:81 - Nobel Prize 1983)';
-    compositionH = spec.includes('DA') ? 0.01 : 0.0;
-    compositionHe = spec.includes('DB') ? 0.05 : 0.01;
-    compositionMetals = 0.98;
-  } else if (stage.includes('supergiant') || lum > 20000 || mass >= 8.0) {
-    fusionType = isCs ? 'Pokročilé slupkové spalování (uhlík, neon, kyslík, křemík)' : 'Advanced Onion-Skin Shell Burning (C, Ne, O, Si)';
-    fusionDesc = isCs
-      ? 'Extrémní teploty v jádře (> 1–3 miliardy K) postupně spalují uhlík, neon, kyslík a křemík až k inertnímu železnému jádru (Fe-56), které nelze fúzovat.'
-      : 'Core temperatures exceeding 1–3 billion K burn Carbon, Neon, Oxygen, and Silicon shells, culminating in an inert Iron-56 core destined for core-collapse.';
-    coreZoneStructure = isCs ? 'Železné jádro • Křemíková/Kyslíková slupka • Konvektivní obal' : 'Fe-56 Core • Si/O/C Burning Shells • Convective Envelope';
-    primaryReactionFormula = '²⁸Si + ²⁸Si → ⁵⁶Ni → ⁵⁶Co → ⁵⁶Fe (Alpha-process to Iron Peak)';
-    scientificCitation = 'Burbidge, Burbidge, Fowler & Hoyle (B2FH, 1957, Rev. Mod. Phys. 29:547)';
-    compositionH = 0.55;
-    compositionHe = 0.40;
-    compositionMetals = 0.05;
-    dredgeUpStatus = isCs ? 'Hluboké konvektivní promíchávání (Dredge-up)' : 'Deep Convective Envelope Dredge-up Active';
-  } else if (stage.includes('giant') || radius > 10.0) {
-    fusionType = isCs ? 'Helium-fúzní 3-alfa proces & vodíková slupka' : 'Triple-Alpha Helium Core Fusion (3α → ¹²C)';
-    fusionDesc = isCs
-      ? 'V jádře probíhá fúze tří heliových jader na uhlík-12 za teploty ~100 milionů K (Salpeterův 3-alfa proces), obklopené hořící vodíkovou slupkou.'
-      : 'Core burns Helium into Carbon-12 via the Salpeter Triple-Alpha process at ~100M K, surrounded by an active Hydrogen-burning shell.';
-    coreZoneStructure = isCs ? 'Heliové/uhlíkové jádro • Slupka fúze H • Obří konvektivní obal' : 'He/C Core • H-Burning Shell • Colossal Convective Envelope';
-    primaryReactionFormula = '3 ⁴He → ¹²C + γ (Salpeter 3α Resonance, 7.27 MeV)';
-    scientificCitation = 'Salpeter, E. E. (1952, ApJ 115:326) & Hoyle State (1954)';
-    compositionH = 0.64;
-    compositionHe = 0.33;
-    compositionMetals = 0.03;
-    dredgeUpStatus = isCs ? '1. a 2. Dredge-up (obohacení dusíkem N-14)' : '1st & 2nd Dredge-up (N-14 enrichment at surface)';
-  } else if (mass >= 1.3) {
-    fusionType = isCs ? 'CNO cyklus (uhlík-dusík-kyslíkový katalytický cyklus)' : 'CNO Catalytic Cycle (Carbon-Nitrogen-Oxygen)';
-    fusionDesc = isCs
-      ? 'U masivnějších hvězd hlavní posloupnosti s teplotou jádra > 18 milionů K dominuje CNO cyklus, kde uhlík, dusík a kyslík slouží jako jaderné katalyzátory. Energetický výkon roste jako T^16.'
-      : 'In stars > 1.3 M☉ with core temperatures > 18M K, the CNO cycle dominates over p-p, using C, N, and O as nuclear catalysts. Energy generation scales sharply as T^16.';
-    coreZoneStructure = isCs ? 'Konvektivní jádro • Zářivý obal' : 'Convective Core • Radiative Outer Envelope';
-    primaryReactionFormula = '¹²C(p,γ)¹³N(β⁺ν)¹³C(p,γ)¹⁴N(p,γ)¹⁵O(β⁺ν)¹⁵N(p,α)¹²C (26.73 MeV)';
-    scientificCitation = 'Bethe, H. A. (1939, Phys. Rev. 55:434 - Nobel Prize 1967)';
-    compositionH = 0.70;
-    compositionHe = 0.28;
-    compositionMetals = 0.02;
-  } else {
-    fusionType = isCs ? 'Proton-protonový řetězec (p-p cyklus)' : 'Proton-Proton Chain (p-p I, II, III)';
-    fusionDesc = isCs
-      ? 'Dominantní proces u Slunce a chladnějších hvězd. Čtyři protony se prostřednictvím slabé interakce a kvantového tunelování spojují v jedno jádro helia-4.'
-      : 'Dominant fusion engine for solar-type and low-mass stars. Four protons fuse into Helium-4 via quantum tunneling and the weak interaction.';
-    coreZoneStructure = isCs ? 'Zářivé jádro • Tachoklína • Konvektivní obálka' : 'Radiative Core • Tachocline • Convective Envelope';
-    primaryReactionFormula = 'p + p → ²H + e⁺ + ν_e  ==>  ⁴He + 2e⁺ + 2ν_e + 2γ (26.73 MeV)';
-    scientificCitation = 'Gamow, G. (1928, Quantum Tunneling) & Critchfield & Bethe (1938)';
-    compositionH = 0.73;
-    compositionHe = 0.25;
-    compositionMetals = 0.02;
+  switch (phase) {
+    case 'black_hole':
+      r = {
+        fusionType: L('No fusion: black hole', 'Bez fúze: černá díra'),
+        fusionDesc: L('The core collapsed beyond the maximum mass of a neutron star (Tolman–Oppenheimer–Volkoff limit, about 2–2.3 M☉). Nothing escapes from inside the event horizon.',
+          'Jádro se zhroutilo za maximální hmotnost neutronové hvězdy (Tolmanova–Oppenheimerova–Volkoffova mez, asi 2–2,3 M☉). Zpod horizontu událostí nic neunikne.'),
+        coreZoneStructure: L('Event horizon (no surface)', 'Horizont událostí (bez povrchu)'),
+        primaryReactionFormula: 'R_s = 2GM/c² ≈ 3 km × (M/M☉)',
+        coreTempLabel: '—',
+        scientificCitation: 'Oppenheimer & Snyder 1939, Phys. Rev. 56, 455'
+      };
+      composition = null;
+      break;
+    case 'neutron_star':
+      r = {
+        fusionType: L('No fusion: neutron star', 'Bez fúze: neutronová hvězda'),
+        fusionDesc: L('Matter at and above nuclear density (~2×10¹⁷ kg/m³) is held up by neutron degeneracy pressure and the strong nuclear force. The star radiates stored heat and cools over millions of years.',
+          'Hmotu o jaderné a vyšší hustotě (~2×10¹⁷ kg/m³) drží tlak degenerovaných neutronů a silná jaderná interakce. Hvězda vyzařuje uložené teplo a chladne po miliony let.'),
+        coreZoneStructure: L('Thin atmosphere • crust • neutron-rich core', 'Tenká atmosféra • kůra • jádro bohaté na neutrony'),
+        primaryReactionFormula: L('M_max ≈ 2.2 M☉ (TOV limit)', 'M_max ≈ 2,2 M☉ (mez TOV)'),
+        coreTempLabel: L('~10⁸–10⁹ K (young)', '~10⁸–10⁹ K (mladá)'),
+        scientificCitation: 'Oppenheimer & Volkoff 1939, Phys. Rev. 55, 374'
+      };
+      composition = null;
+      break;
+    case 'supernova':
+      r = {
+        fusionType: L('Core collapse', 'Kolaps jádra'),
+        fusionDesc: L('The iron core can no longer release energy by fusion and collapses within a fraction of a second; about 99 % of the released gravitational energy escapes as neutrinos.',
+          'Železné jádro už fúzí nemůže uvolnit energii a během zlomku sekundy se zhroutí; asi 99 % uvolněné gravitační energie unikne v neutrinech.'),
+        coreZoneStructure: L('Proto-neutron star • shock • ejected envelope', 'Protoneutronová hvězda • rázová vlna • odvržený obal'),
+        primaryReactionFormula: 'p + e⁻ → n + νₑ',
+        coreTempLabel: '~10¹¹ K',
+        scientificCitation: 'Woosley, Heger & Weaver 2002, Rev. Mod. Phys. 74, 1015'
+      };
+      break;
+    case 'white_dwarf': {
+      const spec = (star.spectralType || '').toUpperCase();
+      const isDA = spec.startsWith('DA');
+      r = {
+        fusionType: L('No fusion: electron-degenerate remnant', 'Bez fúze: elektronově degenerovaný pozůstatek'),
+        fusionDesc: L('Supported by electron degeneracy pressure; it shines only by radiating stored heat and slowly cools (Mestel cooling). Cool massive white dwarfs crystallize.',
+          'Drží ho tlak degenerovaného elektronového plynu; svítí jen díky vyzařování uloženého tepla a pomalu chladne (Mestelovo chladnutí). Chladní hmotní bílí trpaslíci krystalizují.'),
+        coreZoneStructure: L('C/O (or He) degenerate core • thin H/He envelope', 'Degenerované jádro C/O (nebo He) • tenký obal H/He'),
+        primaryReactionFormula: L('P ∝ ρ^5/3 (non-relativistic degenerate electrons); M < 1.4 M☉', 'P ∝ ρ^5/3 (nerelativistické degenerované elektrony); M < 1,4 M☉'),
+        coreTempLabel: L('~10⁶–10⁷ K, cooling', '~10⁶–10⁷ K, chladne'),
+        scientificCitation: 'Chandrasekhar 1931, ApJ 74, 81; Mestel 1952, MNRAS 112, 583'
+      };
+      // Gravitational settling: the atmosphere is almost pure H (DA) or He (DB, DC, DQ, DZ)
+      composition = isDA ? { X: 1.0, Y: 0, Z: 0 } : { X: 0, Y: 1.0, Z: 0 };
+      compositionNote = L('Gravitational settling: hydrogen (DA) or helium atmosphere', 'Gravitační usazování: vodíková (DA) nebo heliová atmosféra');
+      break;
+    }
+    case 'pre_main_sequence':
+      r = {
+        fusionType: L('Gravitational contraction', 'Gravitační smršťování'),
+        fusionDesc: L('The young star shines by releasing gravitational energy as it contracts; deuterium burns briefly, but hydrogen fusion has not started.',
+          'Mladá hvězda září uvolňováním gravitační energie při smršťování; krátce hoří deuterium, fúze vodíku ale ještě nezačala.'),
+        coreZoneStructure: L('Fully or largely convective', 'Plně nebo převážně konvektivní'),
+        primaryReactionFormula: '²H + p → ³He + γ',
+        coreTempLabel: '≲ 10 MK',
+        scientificCitation: 'Hayashi 1961, PASJ 13, 450'
+      };
+      break;
+    case 'main_sequence': {
+      const m = mass || 1;
+      // Homology: T_c ∝ M/R, normalised to the solar central temperature of 15.7 MK
+      const tc = radius ? 15.7 * (m / radius) : null;
+      const tcLabel = tc ? `~${tc < 100 ? tc.toFixed(1) : Math.round(tc)} MK` : '—';
+      const structure = m < 0.35
+        ? L('Fully convective', 'Plně konvektivní')
+        : m < 1.3
+          ? L('Radiative core • convective envelope', 'Zářivé jádro • konvektivní obal')
+          : L('Convective core • radiative envelope', 'Konvektivní jádro • zářivý obal');
+      if (m < 1.3) {
+        r = {
+          fusionType: L('Proton–proton chain', 'Proton-protonový řetězec'),
+          fusionDesc: L('Hydrogen fuses into helium mainly through the proton–proton chain, which dominates in stars below about 1.3 M☉ (core temperatures below ~18 MK).',
+            'Vodík se slučuje na helium převážně proton-protonovým řetězcem, který převládá u hvězd pod asi 1,3 M☉ (teplota jádra pod ~18 MK).'),
+          coreZoneStructure: structure,
+          primaryReactionFormula: '4 ¹H → ⁴He + 2e⁺ + 2νₑ (Q = 26.73 MeV)',
+          coreTempLabel: tcLabel,
+          scientificCitation: 'Bethe & Critchfield 1938, Phys. Rev. 54, 248'
+        };
+      } else {
+        r = {
+          fusionType: L('CNO cycle', 'Cyklus CNO'),
+          fusionDesc: L('Above about 1.3 M☉ hydrogen burns mainly through the CNO cycle, with carbon, nitrogen and oxygen as catalysts. Its rate rises steeply with temperature (∝ T^16–20), which makes the core convective.',
+            'Nad asi 1,3 M☉ hoří vodík převážně v cyklu CNO, v němž uhlík, dusík a kyslík slouží jako katalyzátory. Jeho rychlost strmě roste s teplotou (∝ T^16–20), a proto je jádro konvektivní.'),
+          coreZoneStructure: structure,
+          primaryReactionFormula: '¹²C(p,γ)¹³N(β⁺ν)¹³C(p,γ)¹⁴N(p,γ)¹⁵O(β⁺ν)¹⁵N(p,α)¹²C',
+          coreTempLabel: tcLabel,
+          scientificCitation: 'Bethe 1939, Phys. Rev. 55, 434'
+        };
+      }
+      break;
+    }
+    case 'shell_hydrogen':
+      r = {
+        fusionType: L('Hydrogen shell burning', 'Hoření vodíku ve slupce'),
+        fusionDesc: L('Hydrogen is exhausted in the centre; it burns in a shell around a contracting helium core while the envelope expands and cools.',
+          'Vodík je ve středu vyčerpán; hoří ve slupce kolem smršťujícího se heliového jádra, zatímco obal se rozpíná a chladne.'),
+        coreZoneStructure: L('Inert He core • H-burning shell • expanding envelope', 'Neaktivní heliové jádro • slupka hořícího vodíku • rozpínající se obal'),
+        primaryReactionFormula: L('4 ¹H → ⁴He in a shell', '4 ¹H → ⁴He ve slupce'),
+        coreTempLabel: L('rising towards ~100 MK', 'roste k ~100 MK'),
+        scientificCitation: 'Kippenhahn, Weigert & Weiss 2012, Stellar Structure and Evolution'
+      };
+      break;
+    case 'core_helium':
+      r = {
+        fusionType: L('Core helium burning (triple-alpha process)', 'Hoření helia v jádře (proces 3α)'),
+        fusionDesc: L('At ~100 MK helium fuses into carbon (and oxygen) through the triple-alpha process, made possible by the 7.65 MeV resonance of ¹²C; hydrogen still burns in a shell.',
+          'Při ~100 MK se helium slučuje na uhlík (a kyslík) procesem 3α, který umožňuje rezonance ¹²C o energii 7,65 MeV; vodík dál hoří ve slupce.'),
+        coreZoneStructure: L('He-burning core • H-burning shell • envelope', 'Jádro hořícího helia • slupka hořícího vodíku • obal'),
+        primaryReactionFormula: '3 ⁴He → ¹²C + γ (Q = 7.27 MeV)',
+        coreTempLabel: '~100 MK',
+        scientificCitation: 'Salpeter 1952, ApJ 115, 326; Hoyle 1954, ApJS 1, 121'
+      };
+      break;
+    case 'agb':
+    case 'post_agb':
+      r = {
+        fusionType: L('Helium and hydrogen shell burning', 'Hoření helia a vodíku ve slupkách'),
+        fusionDesc: L('An inert carbon–oxygen core is surrounded by alternately burning helium and hydrogen shells (thermal pulses); strong winds remove the envelope, which later glows as a planetary nebula.',
+          'Neaktivní uhlíkovo-kyslíkové jádro obklopují střídavě hořící slupky helia a vodíku (tepelné pulzy); silný vítr odnáší obal, který později září jako planetární mlhovina.'),
+        coreZoneStructure: L('Degenerate C/O core • He shell • H shell • convective envelope', 'Degenerované jádro C/O • slupka He • slupka H • konvektivní obal'),
+        primaryReactionFormula: '3 ⁴He → ¹²C;  ¹²C + ⁴He → ¹⁶O + γ',
+        coreTempLabel: '~100–300 MK',
+        scientificCitation: 'Herwig 2005, ARA&A 43, 435'
+      };
+      break;
+    case 'supergiant':
+      r = {
+        fusionType: L('Massive star: core helium burning or later stages', 'Hmotná hvězda: hoření helia v jádře nebo pozdější fáze'),
+        fusionDesc: L('Hot blue supergiants may still be finishing core hydrogen burning. Supergiants spend most of their post-main-sequence life burning helium in the core; carbon, neon, oxygen and silicon burning follow only in the last ~10⁴ years, building an onion-like structure that ends with an iron core.',
+          'Horcí modří veleobři mohou ještě dokončovat hoření vodíku v jádře. Veleobři tráví většinu života po hlavní posloupnosti hořením helia v jádře; hoření uhlíku, neonu, kyslíku a křemíku následuje až v posledních ~10⁴ letech a vytváří cibulovitou stavbu zakončenou železným jádrem.'),
+        coreZoneStructure: L('He- (or later C/O/Si-) burning core • burning shells • extended envelope', 'Jádro hořícího helia (později C/O/Si) • hořící slupky • rozsáhlý obal'),
+        primaryReactionFormula: L('3 ⁴He → ¹²C, later C → Ne → O → Si → Fe-group', '3 ⁴He → ¹²C, později C → Ne → O → Si → prvky skupiny železa'),
+        coreTempLabel: L('~0.03 GK (H) – 0.1 GK (He) – 3 GK (Si)', '~0,03 GK (H) – 0,1 GK (He) – 3 GK (Si)'),
+        scientificCitation: 'Woosley, Heger & Weaver 2002, Rev. Mod. Phys. 74, 1015'
+      };
+      break;
+    default:
+      r = {
+        fusionType: L('Hydrogen shell or core helium burning', 'Hoření vodíku ve slupce nebo helia v jádře'),
+        fusionDesc: L('Giants either burn hydrogen in a shell around an inert helium core (red giant branch) or burn helium in the core (red clump, horizontal branch); the H–R position alone cannot always tell which.',
+          'Obři buď spalují vodík ve slupce kolem neaktivního heliového jádra (větev červených obrů), nebo helium v jádře (červený shluk, horizontální větev); samotná poloha v H–R diagramu to vždy nerozliší.'),
+        coreZoneStructure: L('He core • H-burning shell • convective envelope', 'Heliové jádro • slupka hořícího vodíku • konvektivní obal'),
+        primaryReactionFormula: L('4 ¹H → ⁴He (shell) or 3 ⁴He → ¹²C (core)', '4 ¹H → ⁴He (slupka) nebo 3 ⁴He → ¹²C (jádro)'),
+        coreTempLabel: '~30–100 MK',
+        scientificCitation: 'Kippenhahn, Weigert & Weiss 2012, Stellar Structure and Evolution'
+      };
   }
 
   return {
-    fusionType,
-    fusionDesc,
-    coreZoneStructure,
-    primaryReactionFormula,
-    coreTempMK,
-    corePressurePetaPascal,
-    compositionH,
-    compositionHe,
-    compositionMetals,
-    dredgeUpStatus,
-    scientificCitation
+    ...r,
+    phase,
+    compositionH: composition ? composition.X : null,
+    compositionHe: composition ? composition.Y : null,
+    compositionMetals: composition ? composition.Z : null,
+    compositionNote: composition ? compositionNote : null
   };
 }
 
 /**
- * Returns external spectral archives and nucleosynthesis literature links for a star
+ * External spectral archives and literature for a star.
  */
 export function getSpectroscopyLinks(star, lang = 'en') {
-  const isCs = lang === 'cs';
-  const starName = star ? star.name : 'Stellar Spectrum';
-  const hip = star && star.hip ? star.hip : null;
+  const cs = lang === 'cs';
+  const simbadTarget = star && star.hip ? `HIP ${star.hip}` : star ? star.name : null;
+  const links = [];
 
-  const simbadTarget = hip ? `HIP ${hip}` : starName;
-
-  return [
-    {
+  if (simbadTarget) {
+    links.push({
       id: 'simbad_spectra',
-      name: isCs ? `SIMBAD: Spektroskopie & Fotometrie (${simbadTarget})` : `SIMBAD: Spectral & Photometric Data (${simbadTarget})`,
-      url: `http://simbad.u-strasbg.fr/simbad/sim-id?Ident=${encodeURIComponent(simbadTarget)}`,
+      name: `SIMBAD: ${simbadTarget}`,
+      url: `https://simbad.cds.unistra.fr/simbad/sim-id?Ident=${encodeURIComponent(simbadTarget)}`,
       badge: 'CDS SIMBAD',
-      description: isCs
-        ? `Oficiální bibliografická a spektroskopická měření pro ${simbadTarget}`
-        : `Official catalogued spectra, spectral classification and radial velocity for ${simbadTarget}`
-    },
+      description: cs
+        ? 'Spektrální klasifikace, radiální rychlost a literatura k objektu'
+        : 'Spectral classification, radial velocity and literature for the object'
+    });
+  }
+  links.push(
     {
       id: 'eso_uves',
-      name: isCs ? 'Knihovna spekter ESO UVES (Paranal)' : 'ESO UVES Spectral Library',
+      name: cs ? 'Knihovna spekter UVES POP (ESO)' : 'UVES Paranal Observatory Project (ESO)',
       url: 'https://www.eso.org/sci/observing/tools/uvespop.html',
       badge: 'ESO VLT',
-      description: isCs
-        ? 'Vysokorozlišující atlas hvězdných spekter (R ~ 80 000, 300–1000 nm)'
-        : 'High-resolution stellar spectral library from the VLT UVES spectrograph (R ~ 80,000)'
+      description: cs
+        ? 'Spektra jasných hvězd s vysokým rozlišením (R ≈ 80 000, 300–1000 nm; Bagnulo a kol. 2003)'
+        : 'High-resolution spectra of bright stars (R ≈ 80,000, 300–1000 nm; Bagnulo et al. 2003)'
     },
     {
-      id: 'mast_pickles',
-      name: isCs ? 'Atlas spekter STScI / Pickles (1998)' : 'STScI Pickles Spectral Atlas',
-      url: 'https://archive.stsci.edu/hlsps/reference-atlases/cdbs/grid/pickles/',
-      badge: 'STScI MAST',
-      description: isCs
-        ? 'Standardní knihovna kalibrovaných spektrálních toků všech MK tříd'
-        : 'Standard UV-to-NIR stellar flux library across all MK spectral classes'
-    },
-    {
-      id: 'sdss_lamost',
-      name: isCs ? 'Spektroskopický archiv SDSS / LAMOST' : 'SDSS / LAMOST Spectral Archive',
-      url: `https://dr18.sdss.org/optical/spectrum/search?q=${encodeURIComponent(simbadTarget)}`,
-      badge: 'SDSS DR18',
-      description: isCs
-        ? `Pozorovací spektroskopická přehlídka pro ${simbadTarget}`
-        : `Observational optical spectroscopy archive for ${simbadTarget}`
+      id: 'pickles',
+      name: cs ? 'Knihovna spekter Pickles (1998)' : 'Pickles (1998) stellar flux library',
+      url: 'https://ui.adsabs.harvard.edu/abs/1998PASP..110..863P/abstract',
+      badge: 'PASP',
+      description: cs
+        ? 'Kalibrovaná spektra všech spektrálních tříd MK (Pickles 1998, PASP 110, 863)'
+        : 'Flux-calibrated spectra across all MK spectral classes (Pickles 1998, PASP 110, 863)'
     },
     {
       id: 'b2fh_nucleosynthesis',
-      name: isCs ? 'B²FH Astrofyzikální nukleosyntéza' : 'B²FH Stellar Nucleosynthesis',
+      name: cs ? 'Vznik prvků ve hvězdách (B²FH 1957)' : 'Synthesis of the Elements in Stars (B²FH 1957)',
       url: 'https://ui.adsabs.harvard.edu/abs/1957RvMP...29..547B/abstract',
-      badge: 'ADS CITATION',
-      description: isCs
-        ? 'Burbidge, Burbidge, Fowler & Hoyle (1957, Rev. Mod. Phys. 29:547)'
-        : 'Foundational synthesis of the chemical elements in stars (Rev. Mod. Phys. 29:547)'
+      badge: 'Rev. Mod. Phys.',
+      description: 'Burbidge, Burbidge, Fowler & Hoyle 1957, Rev. Mod. Phys. 29, 547'
     }
-  ];
+  );
+  return links;
 }

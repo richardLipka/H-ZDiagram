@@ -1,271 +1,160 @@
 import React from 'react';
-import { temperatureToRGB, calculateHabitableZone } from '../simulation/blackbody';
+import { temperatureToRGB } from '../simulation/blackbody';
+import { getDetailedHabitableZone } from '../simulation/planetaryData';
 import { X, Scale, Plus, Trash2, ExternalLink } from 'lucide-react';
 import { getWikipediaUrl, getSimbadUrl, getVizierHipUrl } from '../utils/catalogLinks';
 import { useLanguage } from '../i18n/LanguageContext';
+import { formatSig, formatInt } from '../utils/format';
+import Modal from './Modal';
 
-export default function ComparisonModal({
-  compareStars,
-  famousStars,
-  onRemoveFromCompare,
-  onAddStarToCompare,
-  onClearCompare,
-  onClose
-}) {
+const QUICK_ADD_IDS = ['sun', 'betelgeuse', 'sirius_a', 'sirius_b', 'proxima_centauri', 'rigel', 'vega'];
+
+export default function ComparisonModal({ compareStars, famousStars, onRemoveFromCompare, onAddStarToCompare, onClearCompare, onClose }) {
   const { lang, t, formatLifetime } = useLanguage();
 
+  const rows = [
+    { label: t('spectralClass'), render: (s) => s.spectralType, className: 'mono-cell' },
+    { label: t('surfaceTempK'), render: (s) => `${formatInt(s.temp, lang)} K` },
+    { label: t('luminositySolar'), render: (s) => `${formatSig(s.lum, lang)} L☉` },
+    { label: t('radiusSolar'), render: (s) => `${formatSig(s.radius, lang)} R☉` },
+    { label: t('massSolar'), render: (s) => (s.mass ? `${formatSig(s.mass, lang)} M☉` : '—') },
+    {
+      label: t('habitableZone'),
+      source: { href: 'https://arxiv.org/abs/1404.5292', text: 'Kopparapu 2014' },
+      render: (s) => {
+        if (s.luminosityClass !== 'V') return t('hzNotApplicable');
+        const hz = getDetailedHabitableZone(s.lum, s.temp);
+        return `${formatSig(hz.runawayGreenhouseAU, lang)} – ${formatSig(hz.maximumGreenhouseAU, lang)} AU${hz.extrapolated ? ' *' : ''}`;
+      },
+      className: 'hz-cell'
+    },
+    { label: t('msLifetime'), render: (s) => (s.luminosityClass === 'V' && s.mass ? formatLifetime(s.mass) : '—') },
+    {
+      label: t('exoplanets'),
+      source: { href: 'https://exoplanetarchive.ipac.caltech.edu/', text: 'NASA Exoplanet Archive' },
+      render: (s) => (s.planetCount ? t('solarPlanets', { count: s.planetCount }) : s.hasExoplanets ? `🪐 ${s.exoplanetCount}` : t('noneDetected'))
+    }
+  ];
+
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="comparison-modal-content" onClick={(e) => e.stopPropagation()}>
-        {/* Modal Header */}
-        <div className="modal-header">
-          <div className="modal-title-group">
-            <Scale size={20} className="modal-icon" />
-            <h2>{t('comparisonTitle')}</h2>
-          </div>
-          <div className="modal-header-actions">
-            {compareStars.length > 0 && (
-              <button className="clear-btn" onClick={onClearCompare} title={t('clearAll')}>
-                <Trash2 size={16} />
-                <span>{t('clearAll')}</span>
-              </button>
-            )}
-            <button className="modal-close-btn" onClick={onClose}>
-              <X size={20} />
+    <Modal labelledBy="comparison-title" className="comparison-modal-content" onClose={onClose}>
+      <div className="modal-header">
+        <div className="modal-title-group">
+          <Scale size={20} className="modal-icon" aria-hidden="true" />
+          <h2 id="comparison-title">{t('comparisonTitle')}</h2>
+        </div>
+        <div className="modal-header-actions">
+          {compareStars.length > 0 && (
+            <button type="button" className="clear-btn" onClick={onClearCompare}>
+              <Trash2 size={16} aria-hidden="true" />
+              <span>{t('clearAll')}</span>
             </button>
+          )}
+          <button type="button" className="modal-close-btn" onClick={onClose} title={t('close')} aria-label={t('close')}>
+            <X size={20} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+
+      {compareStars.length === 0 ? (
+        <div className="empty-compare-state">
+          <p>{t('emptyCompareMsg')}</p>
+          <span className="empty-sub">{t('emptyCompareSub')}</span>
+          <div className="quick-add-chips">
+            {QUICK_ADD_IDS.map((id) => famousStars.find((st) => st.id === id)).filter(Boolean).map((s) => (
+              <button type="button" key={s.id} className="quick-add-chip" onClick={() => onAddStarToCompare(s)}>
+                <Plus size={14} aria-hidden="true" />
+                <span>{s.name}</span>
+              </button>
+            ))}
           </div>
         </div>
-
-        {compareStars.length === 0 ? (
-          <div className="empty-compare-state">
-            <p>{t('emptyCompareMsg')}</p>
-            <span className="empty-sub">
-              {t('emptyCompareSub')}
-            </span>
-            <div className="quick-add-chips">
-              {['Sol', 'Betelgeuse', 'Sirius', 'Proxima Centauri', 'Rigel', 'Vega'].map((starName) => {
-                const s = famousStars.find((st) => st.name.toLowerCase() === starName.toLowerCase() || st.name.toLowerCase().includes(starName.toLowerCase()));
-                if (!s) return null;
+      ) : (
+        <div className="comparison-body">
+          <div className="size-comparison-section">
+            <h3>{t('photosphereScaleTitle')}</h3>
+            <p className="scale-note">{t('photosphereScaleNote')}</p>
+            <div className="photosphere-scale-row">
+              {compareStars.map((star) => {
+                const rgb = temperatureToRGB(star.temp);
+                const visualPx = Math.max(8, Math.min(180, Math.log10(Math.max(1e-5, star.radius)) * 35 + 50));
                 return (
-                  <button
-                    key={s.id}
-                    className="quick-add-chip"
-                    onClick={() => onAddStarToCompare(s)}
-                  >
-                    <Plus size={14} />
-                    <span>{s.name}</span>
-                  </button>
+                  <div key={star.id} className="scale-item">
+                    <div className="scale-sphere-container">
+                      <div
+                        className="scale-sphere"
+                        style={{ width: `${visualPx}px`, height: `${visualPx}px`, borderRadius: '50%', display: 'block', backgroundColor: rgb.css, boxShadow: `0 0 25px ${rgb.css}99` }}
+                      />
+                    </div>
+                    <span className="scale-star-name">{star.name}</span>
+                    <span className="scale-star-radius">{formatSig(star.radius, lang)} R☉</span>
+                  </div>
                 );
               })}
             </div>
           </div>
-        ) : (
-          <div className="comparison-body">
-            {/* Visual Photosphere Scale Comparator */}
-            <div className="size-comparison-section">
-              <h4>{t('photosphereScaleTitle')}</h4>
-              <div className="photosphere-scale-row">
-                {compareStars.map((star) => {
-                  const rgb = temperatureToRGB(star.temp);
-                  // Scaled diameter in pixels for visual representation (logarithmic dampening for huge giants)
-                  let visualPx = Math.max(14, Math.min(180, Math.log10(Math.max(0.01, star.radius)) * 35 + 50));
-                  if (star.radius < 0.02) visualPx = 10; // White dwarf
 
-                  return (
-                    <div key={star.id} className="scale-item">
-                      <div className="scale-sphere-container">
-                        <div
-                          className="scale-sphere"
-                          style={{
-                            width: `${visualPx}px`,
-                            height: `${visualPx}px`,
-                            borderRadius: '50%',
-                            aspectRatio: '1 / 1',
-                            display: 'block',
-                            backgroundColor: rgb.css,
-                            boxShadow: `0 0 25px ${rgb.css}99`
-                          }}
-                        />
-                      </div>
-                      <span className="scale-star-name">{star.name}</span>
-                      <span className="scale-star-radius">{star.radius} R☉</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Astrophysical Parameters Comparison Table */}
-            <div className="table-responsive">
-              <table className="comparison-table">
-                <thead>
-                  <tr>
-                    <th>{t('physicalProperty')}</th>
-                    {compareStars.map((star) => (
-                      <th key={star.id}>
-                        <div className="th-star-header">
-                          <span className="th-star-name">{star.name}</span>
-                          <div className="th-star-links">
-                            <a
-                              href={getWikipediaUrl(star, lang)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="th-ext-link wiki-link"
-                              title={lang === 'cs' ? 'Článek na Wikipedii' : 'Open encyclopedic record on Wikipedia'}
-                            >
-                              <span>Wiki</span>
-                              <ExternalLink size={9} />
-                            </a>
-                            <a
-                              href={getSimbadUrl(star)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="th-ext-link simbad-link"
-                              title={lang === 'cs' ? 'Astronomická databáze CDS SIMBAD' : 'Query CDS SIMBAD database'}
-                            >
-                              <span>SIMBAD</span>
-                              <ExternalLink size={9} />
-                            </a>
-                          </div>
-                          <button
-                            className="th-remove-btn"
-                            onClick={() => onRemoveFromCompare(star.id)}
-                            title={lang === 'cs' ? 'Odebrat' : 'Remove'}
-                          >
-                            ×
-                          </button>
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="prop-name">{t('spectralClass')}</td>
-                    {compareStars.map((s) => (
-                      <td key={s.id} className="mono-cell">{s.spectralType}</td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td className="prop-name">{t('surfaceTempK')}</td>
-                    {compareStars.map((s) => (
-                      <td key={s.id}>{s.temp.toLocaleString()} K</td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td className="prop-name">{t('luminositySolar')}</td>
-                    {compareStars.map((s) => (
-                      <td key={s.id}>{s.lum >= 1000 ? s.lum.toLocaleString() : s.lum} L☉</td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td className="prop-name">{t('radiusSolar')}</td>
-                    {compareStars.map((s) => (
-                      <td key={s.id}>{s.radius} R☉</td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td className="prop-name">{t('massSolar')}</td>
-                    {compareStars.map((s) => (
-                      <td key={s.id}>{s.mass ? `${s.mass} M☉` : '—'}</td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td className="prop-name">
-                      <div className="prop-name-title">{t('habitableZone')}</div>
-                      <a
-                        href="https://arxiv.org/abs/1301.6674"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="prop-source-sublink"
-                        title="Kopparapu et al. (2013, ApJ 765:131) Habitable Zone Model"
-                      >
-                        [ Kopparapu 2013 ↗ ]
-                      </a>
-                    </td>
-                    {compareStars.map((s) => {
-                      const hz = calculateHabitableZone(s.lum, s.temp);
-                      return (
-                        <td key={s.id} className="hz-cell">
-                          {hz.innerAU} – {hz.outerAU} AU
-                        </td>
-                      );
-                    })}
-                  </tr>
-                  <tr>
-                    <td className="prop-name">{t('msLifetime')}</td>
-                    {compareStars.map((s) => (
-                      <td key={s.id}>{formatLifetime(s.mass)}</td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td className="prop-name">
-                      <div className="prop-name-title">{t('exoplanets')}</div>
-                      <a
-                        href="https://exoplanetarchive.ipac.caltech.edu/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="prop-source-sublink"
-                        title="NASA Exoplanet Archive (IPAC / Caltech / NExScI)"
-                      >
-                        [ NASA Archive ↗ ]
-                      </a>
-                    </td>
-                    {compareStars.map((s) => (
-                      <td key={s.id}>
-                        {s.hasExoplanets ? `🪐 ${s.exoplanetCount} ${t('planetsCount')}` : t('noneDetected')}
-                      </td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td className="prop-name">{t('externalCatalogues')}</td>
-                    {compareStars.map((s) => (
-                      <td key={s.id} className="catalog-links-cell">
-                        <div className="comp-links-row">
-                          <a
-                            href={getWikipediaUrl(s, lang)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="cat-table-link wiki-badge"
-                            title={lang === 'cs' ? 'Otevřít článek na Wikipedii' : 'Open Wikipedia article'}
-                          >
-                            <span>{t('wikipediaBadge')}</span>
-                            <ExternalLink size={10} />
+          <div className="table-responsive">
+            <table className="comparison-table">
+              <thead>
+                <tr>
+                  <th scope="col">{t('physicalProperty')}</th>
+                  {compareStars.map((star) => (
+                    <th scope="col" key={star.id}>
+                      <div className="th-star-header">
+                        <span className="th-star-name">{star.name}</span>
+                        <div className="th-star-links">
+                          <a href={getWikipediaUrl(star, lang)} target="_blank" rel="noopener noreferrer" className="th-ext-link wiki-link">
+                            <span>Wiki</span>
+                            <ExternalLink size={9} aria-hidden="true" />
                           </a>
-                          <a
-                            href={getSimbadUrl(s)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="cat-table-link simbad-badge"
-                            title={lang === 'cs' ? 'Dotaz do astronomické databáze CDS SIMBAD' : 'Query CDS SIMBAD database'}
-                          >
+                          <a href={getSimbadUrl(star)} target="_blank" rel="noopener noreferrer" className="th-ext-link simbad-link">
                             <span>SIMBAD</span>
-                            <ExternalLink size={10} />
+                            <ExternalLink size={9} aria-hidden="true" />
                           </a>
-                          {s.hip && (
-                            <a
-                              href={getVizierHipUrl(s)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="cat-table-link vizier-badge"
-                              title={lang === 'cs' ? 'Záznam v katalogu ESA Hipparcos (VizieR)' : 'Query ESA Hipparcos on CDS VizieR'}
-                            >
-                              <span>HIP {s.hip}</span>
-                              <ExternalLink size={10} />
+                          {star.hip && (
+                            <a href={getVizierHipUrl(star)} target="_blank" rel="noopener noreferrer" className="th-ext-link simbad-link">
+                              <span>HIP</span>
+                              <ExternalLink size={9} aria-hidden="true" />
                             </a>
                           )}
                         </div>
-                      </td>
+                        <button
+                          type="button"
+                          className="th-remove-btn"
+                          onClick={() => onRemoveFromCompare(star.id)}
+                          title={t('removeStar', { name: star.name })}
+                          aria-label={t('removeStar', { name: star.name })}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.label}>
+                    <th scope="row" className="prop-name">
+                      <div className="prop-name-title">{row.label}</div>
+                      {row.source && (
+                        <a href={row.source.href} target="_blank" rel="noopener noreferrer" className="prop-source-sublink">
+                          {row.source.text} ↗
+                        </a>
+                      )}
+                    </th>
+                    {compareStars.map((s) => (
+                      <td key={s.id} className={row.className}>{row.render(s)}</td>
                     ))}
                   </tr>
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
+            <p className="scale-note">{t('comparisonFootnote')}</p>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </Modal>
   );
 }
-
-

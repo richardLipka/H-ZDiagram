@@ -1,153 +1,132 @@
-# Hertzsprung–Russell Stellar Cartography & Astrophysics Simulator
-## Complete User Guide & Educational Documentation
+# Hertzsprung–Russell Diagram Studio
+## User guide and classroom activities
 
-Author: **[Richard Lipka](https://home.zcu.cz/~lipka/)**  
-Homepage: [https://home.zcu.cz/~lipka/](https://home.zcu.cz/~lipka/)  
-License: [MIT License](../LICENSE)
+Author: **[Richard Lipka](https://home.zcu.cz/~lipka/)** · License: [MIT](../LICENSE) (code), CC BY-SA 4.0 (star data)
 
 ---
 
-## 1. Introduction to the Hertzsprung–Russell Diagram
+## 1. The Hertzsprung–Russell diagram
 
-The **Hertzsprung–Russell (H–R) diagram** is the central analytical tool of stellar astrophysics, independently developed around 1910 by Ejnar Hertzsprung and Henry Norris Russell. It plots:
-- **Vertical Axis:** Stellar **Luminosity** ($L / L_\odot$, logarithmic scale from $10^{-5}$ up to $10^{6}$) and **Absolute Visual Magnitude** ($M_V$, inverted scale from $+20$ at the bottom to $-10$ at the top).
-- **Horizontal Axis:** **Effective Surface Temperature** ($T_{\text{eff}}$ in Kelvin, reversed so hotter stars are on the left and cooler stars are on the right, from $45{,}000\,\text{K}$ down to $2{,}000\,\text{K}$) and **Harvard Spectral Classification** (O, B, A, F, G, K, M).
+Ejnar Hertzsprung (1905–1911) and Henry Norris Russell (1913–1914) independently discovered that stars do not scatter randomly when brightness is plotted against colour or spectral type. In this application:
 
-Because stars spend ~90% of their lifespans converting hydrogen into helium in their cores, most stars lie along a continuous diagonal band known as the **Main Sequence (Class V)**. When stars deplete their core hydrogen, they expand into **Giants (Class III)** and **Supergiants (Class I)**, or eventually contract into degenerate **White Dwarfs (Class D)**.
+- the **vertical axis** shows luminosity $L/L_\odot$ on a logarithmic scale from $10^{-5}$ to $10^{6}$; the right-hand axis gives the equivalent absolute bolometric magnitude $M_\mathrm{bol} = 4.74 - 2.5\log_{10}(L/L_\odot)$;
+- the **horizontal axis** shows effective temperature from 45,000 K (left) to 2,000 K (right), with the spectral classes O–M above it.
 
----
-
-## 2. Navigating the Simulator
-
-### 2.1 The Tactical Astrometrics Viewport
-The central canvas displays the interactive diagram.
-- **Fixed & Stable Viewport:** The canvas is calibrated to fit galactic standard coordinates cleanly without drifting.
-- **Panning:** Left-click and drag anywhere on the canvas to inspect dense regions of the plot.
-- **Zooming:**
-  - Click the **`[+]`** button (top-right of canvas) to magnify.
-  - Click the **`[-]`** button to demagnify.
-  - Alternatively, hold **`Ctrl`** while scrolling your mouse wheel or using a trackpad pinch gesture.
-  - Click **`[ RECALIBRATE ]`** at any time to return to default scale (1.00x) and center coordinates.
-- **Target Acquisition (Hover):** Moving the cursor over benchmark stars highlights them with a crosshair reticle and displays the HUD target tooltip with instantaneous telemetry.
-- **Target Lock (Click):** Left-clicking a star locks onto it, opening the **Star Inspector** on the right side.
+About 90 % of a star's life is spent fusing hydrogen in the core, on the **main sequence** (luminosity class V). Evolved stars become **subgiants** (IV), **giants** (III), **bright giants** (II) or **supergiants** (I); low- and intermediate-mass stars end as **white dwarfs** (spectral class D).
 
 ---
 
-## 3. Mission Modes & How to Use Them
+## 2. Controls
 
-### 3.1 Mode 01: EXPLORE (Astrometric Exploration)
-The Explore mode is the primary research and survey module.
-
-#### Left Sidebar Controls:
-1. **Astrometric Search Scan:**
-   - Type any star name (e.g. `Sol`, `Sirius`, `Betelgeuse`, `Rigel`, `Vega`, `TRAPPIST-1`, `Aldebaran`, `Polaris`).
-   - Click the star in the auto-complete dropdown to immediately lock target coordinates.
-2. **Spectral Bandpass Filter:**
-   - Click any class button (**O**, **B**, **A**, **F**, **G**, **K**, **M**, **D**, or **ALL**) to isolate stars by thermal class.
-3. **Sensor Overlay Channels:**
-   - **Hipparcos Census (6,500 Stars):** Toggle the deep observational background population sampled from the European Space Agency's Hipparcos catalog.
-   - **Astrophysical Zones & Instability:** Display colored corridors for the Main Sequence, the Instability Strip (Cepheid and RR Lyrae pulsating variables), Red Giant Branch, and White Dwarf cooling track.
-   - **Radial Contours (Isoradii):** Toggle diagonal dashed lines of constant physical radius ($0.001\,R_\odot$, $0.01\,R_\odot$, $0.1\,R_\odot$, $1.0\,R_\odot$, $10\,R_\odot$, $100\,R_\odot$, $1000\,R_\odot$).
-   - **Tactical Identifiers on All Stars:** Show permanent labels on all prominent stars.
-   - **Exoplanetary Host Stars Only:** Filter for stars known to harbor exoplanets.
-
-#### Right Sidebar: Star Inspector Drawer
-When a star is selected, the inspector reveals:
-- **Photosphere Sensor Chamber:** True blackbody color rendition and visual scale.
-- **Biosignature Scan & Circumstellar Habitable Zone:** Graphic scale showing the Goldilocks zone in Astronomical Units (AU) where liquid water can exist, along with confirmed exoplanet counts.
-- **Astrophysical Telemetry Matrix:** Luminosity ($L_\odot$), radius ($R_\odot$), estimated mass ($M_\odot$), absolute visual magnitude ($M_V$), distance from Earth (light-years), and estimated main-sequence lifetime.
-- **Variable Star Pulsation Data:** Measured pulsation periods in standard days for variable stars like Betelgeuse, Delta Cephei, or RR Lyrae.
-- **Historical & Astrometric Logs:** Scientific trivia, historical observations, and planetary system facts.
-- **External Catalogues & Encyclopedic Archives:** One-click direct links to:
-  - **Wikipedia:** Direct canonical articles (with 50+ disambiguated aliases) or intelligent Wikipedia search.
-  - **SIMBAD (CDS Strasbourg):** Deep astronomical database query using Hipparcos (HIP) catalog numbers or Bayer designations.
-  - **ESA Hipparcos Catalogue (VizieR):** Official astrometric records from the Hipparcos mission.
-  - **NASA Exoplanet Archive (Caltech/IPAC):** Confirmed exoplanet planetary system dossiers.
-  - **NASA ADS (Astrophysics Data System):** Peer-reviewed literature and observational studies.
-- **Add to Compare:** Adds the star to the Comparator module.
+- **Pan:** drag the diagram.
+- **Zoom:** the `+` / `−` buttons in the lower-left corner of the plot, or Ctrl + mouse wheel (trackpad pinch). **Reset view** restores the default.
+- **Keyboard:** focus the diagram (Tab), then arrow keys pan, `+`/`−` zoom and `0` resets. Stars are selected with the search box (↑/↓ and Enter).
+- **Hover** a star to see its type, temperature, luminosity and radius; **click** it to open the inspector.
+- Dialogs (Compare, Guide, Data sources) close with Esc.
 
 ---
 
-### 3.2 Mode 02: EVOLUTION (Stellar Lifecycle Sandbox)
-This mode models how stars evolve through time depending on their birth mass.
+## 3. Modes
 
-#### How to use:
-1. Switch to `[ 02 // EVOLUTION ]` in the top navigation.
-2. Select a **Birth Mass** from the preset buttons:
-   - **0.8 $M_\odot$ (K/M Red Dwarf):** Long-lived dwarf, spends >20 billion years on the Main Sequence, ends as a helium white dwarf.
-   - **1.0 $M_\odot$ (Solar Twin / Sun):** Spends ~10 billion years on the Main Sequence, ascends the Red Giant Branch, undergoes helium core flash, expels a planetary nebula, and leaves a carbon-oxygen White Dwarf.
-   - **3.0 $M_\odot$ (Intermediate Mass Star):** Rapid evolution, enters the Instability Strip, undergoes thermal pulses, and sheds outer layers.
-   - **5.0 $M_\odot$ (B-type Star):** Powerful blue star evolving horizontally across the diagram into a massive red giant.
-   - **20.0 $M_\odot$ (High-Mass Supergiant):** Extremely short lifespan (~8 million years), loops through blue and red supergiant phases, ending in a catastrophic Type II Core-Collapse Supernova leaving a neutron star or black hole.
-3. Drag the **Timeline Scrubber** or click the **Play** button to watch the star move across the diagram.
-4. Watch the real-time crosshair reticle on the canvas track the star's path while the Photosphere preview displays changes in size, temperature, and color.
+### 3.1 Explore
 
----
+**Left panel**
 
-### 3.3 Mode 03: CLUSTERS (Isochrone & Age Dating)
-Star clusters are nature's stellar laboratories: all stars in a cluster formed at the same time and distance from the same gas cloud.
+1. *Search stars* — type a name (Sun, Sirius, Betelgeuse, Vega, TRAPPIST-1, …).
+2. *Spectral class* — show only O, B, A, F, G, K, M or white dwarfs (D).
+3. *Diagram layers*:
+   - **Hipparcos stars** — 7,475 stars with parallax errors below 10 % (van Leeuwen 2007);
+   - **Regions and instability strip** — main-sequence band and the classical instability strip (Cepheids, RR Lyrae, δ Scuti stars);
+   - **Lines of constant radius** — 0.001 to 1000 R☉ (Earth ≈ 0.009 R☉, Jupiter ≈ 0.10 R☉, 1 AU ≈ 215 R☉);
+   - **Star names**, **only stars with exoplanets**;
+   - **Gaia fine structure** — the equal-mass binary sequence (twice the luminosity, 0.75 mag brighter), the Jao gap near 0.35 M☉ where stars become fully convective (Jao et al. 2018), and crystallizing massive white dwarfs (Tremblay et al. 2019);
+   - **Compact remnants** — the neutron star RX J1856.5−3754 (far hotter than the axis allows, shown as an arrow at the left edge) and the O-type donor of the black-hole binary Cygnus X-1.
 
-#### How to use:
-1. Switch to `[ 03 // CLUSTERS ]` in the top navigation.
-2. The cyan curve on the diagram represents the theoretical **stellar isochrone**.
-3. Move the **Cluster Age Slider** from **50 Myr** up to **13.5 Gyr**:
-   - At young ages (50–100 Myr), even massive blue O and B stars remain on the Main Sequence.
-   - As age increases, high-mass stars exhaust their core fuel and "peel off" the Main Sequence, turning right toward the Red Giant branch.
-   - The point where the Main Sequence terminates is the **Turn-off Point** (marked with a white and cyan target reticle).
-4. Use the **Real Clusters Presets**:
-   - **Pleiades (Seven Sisters):** ~100 Myr — high turn-off mass (~5 $M_\odot$), bright blue stars dominate.
-   - **Hyades:** ~650 Myr — turn-off mass drops to ~2.2 $M_\odot$.
-   - **M67 (Solar-Age Open Cluster):** ~4.0 Gyr — turn-off mass is ~1.2 $M_\odot$, closely resembling the future of our Sun.
-   - **Globular Clusters (e.g. M13):** ~12.5 Gyr — ancient remnant, turn-off mass $\le 0.85\,M_\odot$.
+**Star inspector**
 
----
+- sky image (DSS2 via CDS hips2fits) or a blackbody-colour model;
+- SIMBAD object type, parallax and radial velocity (via CDS Sesame);
+- **spectrum** — Planck continuum with schematic absorption lines (Balmer, He I/II, Ca II H & K, Na D, Mg b, Fe I, TiO);
+- **core** — energy source for the evolutionary stage (p–p chain, CNO cycle, shell burning, triple-alpha process, degenerate remnant), structure and surface composition, with a reference;
+- **habitable zone** — Kopparapu et al. (2014) limits with the planets of the Solar System, TRAPPIST-1, Proxima Centauri, Kepler-186, Pollux and 51 Pegasi; warnings when the model is extrapolated or the star is not on the main sequence;
+- **physical parameters** — luminosity, radius, mass, absolute visual magnitude, distance and main-sequence lifetime (main-sequence stars only);
+- notes with references, and links to Wikipedia, SIMBAD, VizieR, the NASA Exoplanet Archive and NASA ADS.
 
-### 3.4 Mode 04: COMPARATOR (Multi-Star Benchmarking)
-1. Switch to `[ 04 // COMPARATOR ]` in the top navigation (or click "Add to Compare" from the Star Inspector).
-2. Add up to 4 stars to compare side-by-side.
-3. Compare:
-   - Size differences (e.g., Sol vs. Betelgeuse vs. Sirius B).
-   - Habitable zone distance shifts (a habitable planet around an M-dwarf must orbit at 0.05 AU, while around a giant star it would need to orbit at >20 AU).
-   - Luminosity ratios (Betelgeuse is over 100,000 times brighter than the Sun).
+Values of benchmark stars come from the literature (references are listed). Values of the other named stars are derived from Hipparcos photometry and parallaxes with standard calibrations and are approximate (see section 5).
 
----
+### 3.2 Evolution
 
-## 4. Educational Classroom Worksheets & Activities
+Choose an initial mass (0.4, 1, 3, 15 or 25 M☉) and move the time slider or press Play. The marker on the diagram, the photosphere, the core process and the habitable zone follow the star.
 
-### Activity 1: Verify the Stefan–Boltzmann Law
-1. Select **Sol** from the search bar. Note $T_{\text{eff}} = 5778\,\text{K}$ and $L = 1.0\,L_\odot$.
-2. Select **Sirius A**. Note $T_{\text{eff}} \approx 9940\,\text{K}$ and $L \approx 25.4\,L_\odot$.
-3. Using the formula:
-   $$R = \sqrt{L} \times \left(\frac{5778}{T}\right)^2$$
-   Calculate $R$ and verify that the Star Inspector displays $R \approx 1.71\,R_\odot$.
+- **0.4 M☉** — main-sequence lifetime far longer than the age of the Universe; the late stages are model predictions (Laughlin et al. 1997). Ends as a helium white dwarf.
+- **1 M☉ (the Sun)** — main sequence for about 10 Gyr, red giant branch (tip ≈ 2,350 L☉, ≈ 170 R☉; Sackmann et al. 1993), helium flash, red clump, asymptotic giant branch, planetary nebula, C/O white dwarf of about 0.54 M☉.
+- **3 M☉** — core helium ignites without a flash; blue loop; AGB; C/O white dwarf of about 0.73 M☉ (Cummings et al. 2018).
+- **15 M☉** — blue and red supergiant, core-collapse supernova (Type II-P), neutron star.
+- **25 M☉** — red supergiant; core collapse may give a supernova or a black hole (Sukhbold et al. 2016).
 
-### Activity 2: The Red Supergiant Mystery
-1. Locate **Betelgeuse** (top-right of the H–R diagram).
-2. Observe its temperature: only ~3,600 K (cooler than the Sun, glowing red-orange).
-3. Question: *If Betelgeuse is cooler than the Sun, how can its luminosity be over 100,000 times greater?*
-4. Solution: The Stefan–Boltzmann law shows $L \propto R^2 T^4$. Because its surface area is gargantuan ($R \approx 764\,R_\odot$, larger than the orbit of Mars and Jupiter), its total radiated flux is immense!
+Waypoints are rounded values guided by published models (Ekström et al. 2012 for 3–25 M☉); the time axis is not to scale. Objects outside the diagram (planetary-nebula nucleus, supernova, neutron star) are pinned to its edge and labelled "off scale"; a black hole has no photosphere and no place on the diagram.
 
-### Activity 3: Dating a Star Cluster
-1. Open the **Cluster Simulator**.
-2. Set the age to match the **Pleiades** preset.
-3. Read the turn-off point: $M_{\text{turnoff}} \approx 5.1\,M_\odot$, $T_{\text{eff}} \approx 16{,}000\,\text{K}$.
-4. Explain why there are no red giants with masses $> 6\,M_\odot$ in the Pleiades: *They have already completed their lifecycles and exploded as supernovae millions of years ago!*
+### 3.3 Clusters
+
+The stars of a cluster formed at nearly the same time. Main-sequence lifetime drops steeply with mass, $t_\mathrm{MS} \approx 10\,\mathrm{Gyr}\,(M/M_\odot)^{-2.5}$, so the main sequence of an older cluster ends at a lower mass — the **turn-off point**.
+
+- The slider is logarithmic, from 50 Myr to 13.5 Gyr.
+- The solid curve is the main sequence (empirical dwarf sequence of Pecaut & Mamajek 2013); the dashed curve after the turn-off is a schematic giant branch.
+- Presets: Pleiades (~125 Myr, Stauffer et al. 1998), Hyades (~625 Myr, Perryman et al. 1998), M67 (~4 Gyr), 47 Tucanae (~12 Gyr).
+- Hipparcos members of the Pleiades (ages up to 300 Myr) or the Hyades (300 Myr – 1.5 Gyr) are overplotted, placed at the cluster mean distance from Gaia DR2.
+
+The lifetime scaling overestimates the lifetimes of massive stars, so turn-off masses of young clusters are somewhat too high.
+
+### 3.4 Academy
+
+Three tasks: find a Sun-like main-sequence G star (5,400–6,100 K, 0.7–1.5 L☉), a star with a confirmed planet in its habitable zone, and a white dwarf smaller than 0.03 R☉.
+
+### 3.5 Compare
+
+Up to four stars side by side, with a logarithmic size comparison and a table of temperature, luminosity, radius, mass, habitable zone (main-sequence stars), main-sequence lifetime and number of planets.
 
 ---
 
-## 5. Technical Architecture & Data Provenance
+## 4. Classroom activities
 
-- **Coordinate Projection:** Custom logarithmic-to-pixel mapping in `src/utils/coordinates.js`.
-- **Blackbody Color Rendering:** Accurate Planckian locus chromaticity transformation in `src/simulation/blackbody.js`.
-- **Data Source:** HYG Database v3.8, compiled by David Nash from Hipparcos (ESA), Yale Bright Star Catalogue, and CNS3 Gliese catalogs.
-- **Decoupled Datasets:** JSON data files in `/public/data/` asynchronously retrieved via `dataLoader.js`.
+### Activity 1: the Stefan–Boltzmann law
+
+1. Select **Sun (Sol)**: $T_\mathrm{eff} = 5{,}772$ K, $L = 1\,L_\odot$.
+2. Select **Sirius A**: $T_\mathrm{eff} = 9{,}940$ K, $L = 25.4\,L_\odot$.
+3. Compute $R = \sqrt{L}\,(5772/T)^2 = \sqrt{25.4}\times(5772/9940)^2 \approx 1.70\,R_\odot$ and compare with the inspector (1.71 R☉).
+4. Repeat for **Sirius B** ($T = 25{,}000$ K, $L = 0.024\,L_\odot$): $R \approx 0.0081\,R_\odot$, about 5,600 km — the size of the Earth.
+
+### Activity 2: a cool but luminous star
+
+1. Find **Betelgeuse** (upper right).
+2. It is cooler than the Sun (≈ 3,600 K) but about 89,000 times more luminous.
+3. Since $L \propto R^2 T^4$, its radius must be huge: $R \approx 764\,R_\odot \approx 3.6$ AU, beyond the orbit of Mars.
+
+### Activity 3: dating a cluster
+
+1. Open **Clusters** and choose the **Pleiades** preset.
+2. Read the turn-off: about 5.8 M☉, 17,800 K, 1,300 L☉ (from the simplified lifetime relation; detailed isochrones give about 4–5 M☉).
+3. Why are there no main-sequence O stars in the Pleiades? Stars more massive than the turn-off mass have already left the main sequence; those above about 8 M☉ have ended as supernovae.
+4. Move the slider to 4 Gyr (M67) and to 12 Gyr (47 Tucanae) and watch the turn-off move down the main sequence.
+
+### Activity 4: habitable zones
+
+1. Open **TRAPPIST-1** and look at the habitable-zone diagram: planets e, f and g lie inside the zone, at only 0.03–0.05 AU.
+2. Compare with the Sun (0.95–1.68 AU) and explain the difference with $d \propto \sqrt{L}$.
 
 ---
 
-## 6. Author & Contact
+## 5. Data provenance
 
-**Richard Lipka**  
-Department of Computer Science and Engineering (KIV)  
-Faculty of Applied Sciences, University of West Bohemia, Pilsen, Czech Republic  
-- Personal Website: [https://home.zcu.cz/~lipka/](https://home.zcu.cz/~lipka/)  
-- GitLab / GitHub Projects: [https://github.com/richardLipka](https://github.com/richardLipka)
+- **Background stars:** HYG v3.8 (Nash) photometry with Hipparcos new-reduction parallaxes (van Leeuwen 2007), only σϖ/ϖ < 10 %.
+- **Temperatures and luminosities:** Flower (1996) as corrected by Torres (2010) for giants and supergiants; Pecaut & Mamajek (2013) for dwarfs, O/B stars and M dwarfs; luminosities are bolometric.
+- **Planet counts:** NASA Exoplanet Archive (table of composite planet parameters).
+- **Benchmark stars:** literature values with references (`scripts/data/curated_stars.json`).
+- **Build script:** `npm run data` (`scripts/buildStellarData.mjs`) regenerates everything in `public/data/`.
+- **Simplified models:** evolutionary tracks, cluster isochrones and absorption-line strengths are teaching models, not stellar-evolution or radiative-transfer calculations.
+
+---
+
+## 6. Author
+
+**Richard Lipka**, Department of Computer Science and Engineering (KIV), Faculty of Applied Sciences, University of West Bohemia, Pilsen, Czech Republic — [home.zcu.cz/~lipka](https://home.zcu.cz/~lipka/) · [github.com/richardLipka](https://github.com/richardLipka)

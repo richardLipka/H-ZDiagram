@@ -1,20 +1,45 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { HRCoordinates, SPECTRAL_CLASSES, CONSTANT_RADII } from '../utils/coordinates';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { HRCoordinates, SPECTRAL_CLASSES, CONSTANT_RADII, DEFAULT_BOUNDS } from '../utils/coordinates';
 import { temperatureToRGB } from '../simulation/blackbody';
+import { mainSequenceParams, MAMAJEK_DWARF_SEQUENCE } from '../simulation/mainSequence';
 import { useLanguage } from '../i18n/LanguageContext';
+import { formatSig, formatInt } from '../utils/format';
+
+const MARGINS = { top: 68, right: 75, bottom: 65, left: 85 };
+const ZOOM_MIN = 0.6;
+const ZOOM_MAX = 6.0;
+
+/** Whether a catalogue star passes the active filters. */
+function isVisible(star, { filterClass, filterPlanetsOnly, filterSearch, showRelativisticRemnants }) {
+  if (filterClass !== 'ALL') {
+    const spec = star.spectralType || '';
+    if (filterClass === 'D' ? star.luminosityClass !== 'D' : !spec.startsWith(filterClass)) return false;
+  }
+  if (filterPlanetsOnly && !star.hasExoplanets) return false;
+  if (filterSearch && !star.name.toLowerCase().includes(filterSearch.toLowerCase())) return false;
+  if (star.isExotic && !showRelativisticRemnants) return false;
+  return true;
+}
+
+/** Canvas position of a star; objects hotter than the axis are pinned to its edge. */
+function starPosition(coords, star) {
+  const offScale = star.temp > DEFAULT_BOUNDS.maxTemp;
+  const pos = coords.toCanvas(Math.min(star.temp, DEFAULT_BOUNDS.maxTemp), star.lum);
+  return { ...pos, offScale };
+}
 
 export default function HRCanvas({
   famousStars,
   backgroundStars,
   selectedStar,
   onSelectStar,
-  activeMode, // 'explore' | 'evolution' | 'cluster' | 'compare'
+  activeMode,
   evolutionState,
   evolutionTrackPoints,
   clusterIsochrone,
   clusterMembers,
   clusterAgeGyr,
-  filterClass, // 'ALL' | 'O' | 'B' | 'A' | 'F' | 'G' | 'K' | 'M' | 'D'
+  filterClass,
   filterPlanetsOnly,
   filterSearch,
   showIsoradii,
@@ -26,56 +51,58 @@ export default function HRCanvas({
 }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
-  const { lang, t, translateStageName } = useLanguage();
+  const { lang, t } = useLanguage();
 
-  // Pan & Zoom state - stable by default
   const [zoom, setZoom] = useState(1.0);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [hoveredStar, setHoveredStar] = useState(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [dimensions, setDimensions] = useState({ width: 900, height: 600 });
 
-  // Stable drag tracking ref to avoid stale state and sticky drag
-  const dragRef = useRef({
-    isDown: false,
-    hasMoved: false,
-    startX: 0,
-    startY: 0,
-    panX: 0,
-    panY: 0
-  });
+  const dragRef = useRef({ isDown: false, hasMoved: false, startX: 0, startY: 0, panX: 0, panY: 0 });
+  const filters = useMemo(
+    () => ({ filterClass, filterPlanetsOnly, filterSearch, showRelativisticRemnants }),
+    [filterClass, filterPlanetsOnly, filterSearch, showRelativisticRemnants]
+  );
 
-  // Observe container size smoothly without subpixel layout oscillations
+  // Track container size
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
-
+    if (!container) return undefined;
     const updateSize = () => {
       const rect = container.getBoundingClientRect();
       if (rect.width > 0 && rect.height > 0) {
-        setDimensions({
-          width: Math.floor(rect.width),
-          height: Math.floor(rect.height)
-        });
+        setDimensions({ width: Math.floor(rect.width), height: Math.floor(rect.height) });
       }
     };
-
     updateSize();
-    const observer = new ResizeObserver(() => {
-      updateSize();
-    });
+    const observer = new ResizeObserver(updateSize);
     observer.observe(container);
-
     return () => observer.disconnect();
   }, []);
 
-  // Reset zoom & pan
+  const clampZoom = (z) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Number(z.toFixed(3))));
   const handleResetView = useCallback(() => {
     setZoom(1.0);
     setPan({ x: 0, y: 0 });
   }, []);
 
-  // Main render loop - driven by dataset & dimensions, NOT by high-frequency mouse movements
+  // Ctrl/⌘ + wheel (and trackpad pinch) zooms. The listener must be non-passive
+  // to be allowed to cancel the browser's own page zoom.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    const onWheel = (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const factor = Math.max(0.7, Math.min(1.3, 1 - e.deltaY * 0.002));
+      setZoom((z) => clampZoom(z * factor));
+    };
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', onWheel);
+  }, []);
+
+  // Rendering
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -90,150 +117,118 @@ export default function HRCanvas({
     canvas.height = Math.round(height * dpr);
     ctx.scale(dpr, dpr);
 
-    const coords = new HRCoordinates(width, height, { top: 68, right: 75, bottom: 65, left: 85 });
+    const coords = new HRCoordinates(width, height, MARGINS);
     coords.setTransform(zoom, pan.x, pan.y);
 
-    // 1. Clear background & draw Deep Void Black with subtle Astrometrics Blue Nebula
+    const plotLeft = MARGINS.left;
+    const plotTop = MARGINS.top;
+    const plotRight = width - MARGINS.right;
+    const plotBottom = height - MARGINS.bottom;
+    const plotW = plotRight - plotLeft;
+    const plotH = plotBottom - plotTop;
+    const clipToPlot = () => {
+      ctx.beginPath();
+      ctx.rect(plotLeft, plotTop, plotW, plotH);
+      ctx.clip();
+    };
+
+    // 1. Background
     ctx.fillStyle = '#010308';
     ctx.fillRect(0, 0, width, height);
-
-    const bgGrad = ctx.createRadialGradient(
-      width * 0.5, height * 0.45, 100,
-      width * 0.5, height * 0.5, Math.max(width, height) * 0.8
-    );
+    const bgGrad = ctx.createRadialGradient(width * 0.5, height * 0.45, 100, width * 0.5, height * 0.5, Math.max(width, height) * 0.8);
     bgGrad.addColorStop(0, 'rgba(4, 18, 48, 0.45)');
     bgGrad.addColorStop(0.6, 'rgba(2, 8, 24, 0.7)');
     bgGrad.addColorStop(1, '#010308');
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, width, height);
-
-    // 2. Plot Area Coordinates
-    const plotLeft = coords.margins.left;
-    const plotTop = coords.margins.top;
-    const plotRight = width - coords.margins.right;
-    const plotBottom = height - coords.margins.bottom;
-    const plotW = plotRight - plotLeft;
-    const plotH = plotBottom - plotTop;
-
-    // Deep astrometrics tactical grid fill
     ctx.fillStyle = 'rgba(2, 6, 16, 0.85)';
     ctx.fillRect(plotLeft, plotTop, plotW, plotH);
 
-    // 3. Draw Tactical Astrometrics Region Boundaries
+    // 2. Regions of the diagram
     if (showRegions) {
       ctx.save();
-      ctx.beginPath();
-      ctx.rect(plotLeft, plotTop, plotW, plotH);
-      ctx.clip();
+      clipToPlot();
 
-      // Main Sequence tactical corridor
+      // Main-sequence band
       ctx.fillStyle = 'rgba(0, 140, 255, 0.06)';
       ctx.strokeStyle = 'rgba(0, 200, 255, 0.2)';
       ctx.lineWidth = 1;
+      const msTop = [[35000, 150000], [20000, 10000], [10000, 100], [6000, 3.5], [3000, 0.02], [2200, 0.0004]];
+      const msBottom = [[2200, 0.00002], [3000, 0.001], [6000, 0.3], [10000, 10], [20000, 800], [35000, 15000]];
       ctx.beginPath();
-      const msPointsTop = [
-        coords.toCanvas(35000, 150000),
-        coords.toCanvas(20000, 10000),
-        coords.toCanvas(10000, 100),
-        coords.toCanvas(6000, 3.5),
-        coords.toCanvas(3000, 0.02),
-        coords.toCanvas(2200, 0.0004)
-      ];
-      const msPointsBottom = [
-        coords.toCanvas(2200, 0.00002),
-        coords.toCanvas(3000, 0.001),
-        coords.toCanvas(6000, 0.3),
-        coords.toCanvas(10000, 10),
-        coords.toCanvas(20000, 800),
-        coords.toCanvas(35000, 15000)
-      ];
-      ctx.moveTo(msPointsTop[0].x, msPointsTop[0].y);
-      for (let p of msPointsTop) ctx.lineTo(p.x, p.y);
-      for (let p of msPointsBottom) ctx.lineTo(p.x, p.y);
+      [...msTop, ...msBottom].forEach(([tK, l], i) => {
+        const p = coords.toCanvas(tK, l);
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
 
-      // Instability Strip overlay (Cepheids, RR Lyrae pulsators)
+      // Classical instability strip (Cepheids, RR Lyrae, δ Scuti)
       ctx.fillStyle = 'rgba(0, 240, 255, 0.08)';
       ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
-      const isTopL = coords.toCanvas(7500, 80000);
-      const isTopR = coords.toCanvas(5200, 80000);
-      const isBotR = coords.toCanvas(5800, 10);
-      const isBotL = coords.toCanvas(8200, 10);
-      ctx.moveTo(isTopL.x, isTopL.y);
-      ctx.lineTo(isTopR.x, isTopR.y);
-      ctx.lineTo(isBotR.x, isBotR.y);
-      ctx.lineTo(isBotL.x, isBotL.y);
+      [[7500, 80000], [5200, 80000], [5800, 10], [8200, 10]].forEach(([tK, l], i) => {
+        const p = coords.toCanvas(tK, l);
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Label instability strip
-      const isCenter = coords.toCanvas(6500, 2500);
+      ctx.textAlign = 'center';
       ctx.font = '600 10px "JetBrains Mono", monospace';
       ctx.fillStyle = 'rgba(0, 240, 255, 0.85)';
-      ctx.textAlign = 'center';
-      ctx.fillText(lang === 'cs' ? '[ PÁS NESTABILITY // CEFEIDY ]' : '[ INSTABILITY STRIP // PULSATING ]', isCenter.x, isCenter.y);
+      const isCenter = coords.toCanvas(6500, 2500);
+      ctx.fillText(t('canvasInstabilityStrip'), isCenter.x, isCenter.y);
 
-      // White Dwarf Region
-      const wdCenter = coords.toCanvas(16000, 0.002);
       ctx.font = '600 11px "Orbitron", sans-serif';
-      ctx.fillStyle = 'rgba(200, 230, 255, 0.6)';
-      ctx.fillText(lang === 'cs' ? '[ DEGENEROVANÁ JÁDRA // BÍLÍ TRPASLÍCI ]' : '[ DEGENERATE CORES // WHITE DWARFS ]', wdCenter.x, wdCenter.y);
+      ctx.fillStyle = 'rgba(200, 230, 255, 0.7)';
+      const wdCenter = coords.toCanvas(16000, 0.0015);
+      ctx.fillText(t('canvasWhiteDwarfs'), wdCenter.x, wdCenter.y);
 
-      // Red Giants Region
-      const rgCenter = coords.toCanvas(3900, 250);
-      ctx.fillStyle = 'rgba(255, 120, 120, 0.7)';
-      ctx.fillText(lang === 'cs' ? '[ ČERVENÍ OBŘI // RGB ]' : '[ RED GIANTS // RGB ]', rgCenter.x, rgCenter.y);
+      ctx.fillStyle = 'rgba(255, 140, 140, 0.8)';
+      const rgCenter = coords.toCanvas(3400, 2500);
+      ctx.fillText(t('canvasRedGiants'), rgCenter.x, rgCenter.y);
 
-      // Supergiants Region
-      const sgCenter = coords.toCanvas(8000, 150000);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-      ctx.fillText(lang === 'cs' ? '[ VELEOBŘI // TŘÍDA I ]' : '[ SUPERGIANTS // CLASS I ]', sgCenter.x, sgCenter.y);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      const sgCenter = coords.toCanvas(8000, 300000);
+      ctx.fillText(t('canvasSupergiants'), sgCenter.x, sgCenter.y);
 
-      // Main Sequence label
-      const msLabel = coords.toCanvas(5800, 1.2);
       ctx.fillStyle = 'rgba(0, 240, 255, 0.85)';
       ctx.font = '700 11px "Orbitron", sans-serif';
-      ctx.fillText(lang === 'cs' ? 'HLAVNÍ POSLOUPNOST (TŘÍDA V)' : 'MAIN SEQUENCE (CLASS V)', msLabel.x + 45, msLabel.y + 25);
-
+      const msLabel = coords.toCanvas(13000, 0.4);
+      ctx.fillText(t('canvasMainSequence'), msLabel.x, msLabel.y);
       ctx.restore();
     }
 
-    // 4. Draw Constant Radius Lines (Diagonal Isoradius Lines)
+    // 3. Lines of constant radius
     if (showIsoradii) {
       ctx.save();
-      ctx.beginPath();
-      ctx.rect(plotLeft, plotTop, plotW, plotH);
-      ctx.clip();
-
+      clipToPlot();
       ctx.strokeStyle = 'rgba(0, 200, 255, 0.16)';
       ctx.setLineDash([2, 5]);
       ctx.lineWidth = 1;
-
-      for (let rObj of CONSTANT_RADII) {
-        const p1 = coords.toCanvas(45000, HRCoordinates.getLumForRadius(rObj.radius, 45000));
-        const p2 = coords.toCanvas(2000, HRCoordinates.getLumForRadius(rObj.radius, 2000));
-
+      for (const radius of CONSTANT_RADII) {
+        const p1 = coords.toCanvas(DEFAULT_BOUNDS.maxTemp, HRCoordinates.getLumForRadius(radius, DEFAULT_BOUNDS.maxTemp));
+        const p2 = coords.toCanvas(DEFAULT_BOUNDS.minTemp, HRCoordinates.getLumForRadius(radius, DEFAULT_BOUNDS.minTemp));
         ctx.beginPath();
         ctx.moveTo(p1.x, p1.y);
         ctx.lineTo(p2.x, p2.y);
         ctx.stroke();
 
-        const midT = 11000;
-        const pLabel = coords.toCanvas(midT, HRCoordinates.getLumForRadius(rObj.radius, midT));
+        const pLabel = coords.toCanvas(11000, HRCoordinates.getLumForRadius(radius, 11000));
         if (coords.isInPlotBounds(pLabel.x, pLabel.y)) {
           ctx.save();
           ctx.translate(pLabel.x, pLabel.y);
-          const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
-          ctx.rotate(angle);
+          ctx.rotate(Math.atan2(p2.y - p1.y, p2.x - p1.x));
           ctx.font = '500 9px "JetBrains Mono", monospace';
           ctx.fillStyle = 'rgba(0, 240, 255, 0.6)';
-          ctx.fillText(`R = ${rObj.radius} R☉`, 0, -3);
+          ctx.fillText(`R = ${formatSig(radius, lang)} R☉`, 0, -3);
           ctx.restore();
         }
       }
@@ -241,300 +236,179 @@ export default function HRCanvas({
       ctx.restore();
     }
 
-    // 4b. Draw Gaia DR3 Fine-Structure Overlays (Jao Gap, Binary Ridge, Crystallization)
+    // 4. Fine structure seen in Gaia H–R diagrams
     if (showGaiaFineStructure) {
       ctx.save();
-      ctx.beginPath();
-      ctx.rect(plotLeft, plotTop, plotW, plotH);
-      ctx.clip();
+      clipToPlot();
 
-      // 1. Equal-Mass Binary Ridge (+0.753 mag / 2x L parallel sequence)
+      // Unresolved equal-mass binaries: same colour, twice the luminosity (0.75 mag brighter)
       ctx.strokeStyle = 'rgba(255, 215, 0, 0.65)';
       ctx.lineWidth = 1.6;
       ctx.setLineDash([5, 4]);
       ctx.beginPath();
-      const msPoints = [
-        { t: 35000, l: 150000 * 2 },
-        { t: 25000, l: 20000 * 2 },
-        { t: 15000, l: 800 * 2 },
-        { t: 10000, l: 50 * 2 },
-        { t: 7500, l: 6 * 2 },
-        { t: 6000, l: 1.2 * 2 },
-        { t: 5000, l: 0.35 * 2 },
-        { t: 3800, l: 0.05 * 2 },
-        { t: 2800, l: 0.001 * 2 }
-      ];
-      let firstBin = true;
-      for (let pt of msPoints) {
-        const pos = coords.toCanvas(pt.t, pt.l);
-        if (firstBin) { ctx.moveTo(pos.x, pos.y); firstBin = false; }
-        else { ctx.lineTo(pos.x, pos.y); }
-      }
+      MAMAJEK_DWARF_SEQUENCE.filter(([, tK]) => tK <= 40000).forEach(([, tK, logL], i) => {
+        const p = coords.toCanvas(tK, 2 * 10 ** logL);
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
       ctx.stroke();
       ctx.setLineDash([]);
+      const binMs = mainSequenceParams(9);
+      const binPos = coords.toCanvas(binMs.temp, 2 * binMs.lum);
+      ctx.font = '600 9px "JetBrains Mono", monospace';
+      ctx.fillStyle = '#ffd700';
+      ctx.textAlign = 'left';
+      ctx.fillText(t('canvasBinarySequence'), binPos.x + 8, binPos.y - 6);
 
-      const binLabelPos = coords.toCanvas(7500, 6 * 2);
-      if (coords.isInPlotBounds(binLabelPos.x, binLabelPos.y)) {
-        ctx.font = '600 9px "JetBrains Mono", monospace';
-        ctx.fillStyle = '#ffd700';
-        ctx.textAlign = 'left';
-        ctx.fillText(
-          lang === 'cs'
-            ? 'Nerozlišené fyzické dvojhvězdy (+0,75 mag / 2× L☉)'
-            : 'Unresolved Equal-Mass Binaries (-0.75 mag / 2× L☉)',
-          binLabelPos.x + 8,
-          binLabelPos.y - 6
-        );
-      }
+      // Jao gap: onset of full convection near 0.35 M☉ (Jao et al. 2018)
+      const jao = mainSequenceParams(0.35);
+      const jaoPos = coords.toCanvas(jao.temp, jao.lum);
+      ctx.strokeStyle = '#ff9900';
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(jaoPos.x - 30, jaoPos.y - 8);
+      ctx.lineTo(jaoPos.x + 30, jaoPos.y + 8);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = '700 9px "JetBrains Mono", monospace';
+      ctx.fillStyle = '#ffaa00';
+      ctx.textAlign = 'right';
+      ctx.fillText(t('canvasJaoGap'), jaoPos.x - 36, jaoPos.y + 14);
+      ctx.textAlign = 'left';
 
-      // 2. The Jao Gap (0.35 M_sun fully convective boundary)
-      const jaoPos = coords.toCanvas(3250, 0.0035);
-      if (coords.isInPlotBounds(jaoPos.x, jaoPos.y)) {
-        ctx.strokeStyle = '#ff9900';
-        ctx.lineWidth = 2.5;
-        ctx.setLineDash([4, 3]);
-        ctx.beginPath();
-        ctx.moveTo(jaoPos.x - 45, jaoPos.y);
-        ctx.lineTo(jaoPos.x + 45, jaoPos.y);
-        ctx.stroke();
-
-        ctx.setLineDash([]);
-        ctx.beginPath();
-        ctx.moveTo(jaoPos.x - 45, jaoPos.y - 5);
-        ctx.lineTo(jaoPos.x - 45, jaoPos.y + 5);
-        ctx.moveTo(jaoPos.x + 45, jaoPos.y - 5);
-        ctx.lineTo(jaoPos.x + 45, jaoPos.y + 5);
-        ctx.stroke();
-
-        ctx.font = '700 9px "JetBrains Mono", monospace';
-        ctx.fillStyle = '#ffaa00';
-        ctx.textAlign = 'left';
-        ctx.fillText(
-          lang === 'cs'
-            ? 'Gaia DR3: Jao Gap (0,35 M☉, mez plné konvekce)'
-            : 'Gaia DR3: Jao Gap (0.35 M☉ fully convective core boundary)',
-          jaoPos.x + 52,
-          jaoPos.y + 3
-        );
-      }
-
-      // 3. White Dwarf Crystallization & Q-Branch
-      const wdCrystPos = coords.toCanvas(7200, 0.0003);
-      if (coords.isInPlotBounds(wdCrystPos.x, wdCrystPos.y)) {
-        ctx.fillStyle = 'rgba(0, 240, 255, 0.12)';
-        ctx.strokeStyle = '#00f0ff';
-        ctx.lineWidth = 1.2;
-        ctx.strokeRect(wdCrystPos.x - 55, wdCrystPos.y - 11, 110, 22);
-        ctx.fillRect(wdCrystPos.x - 55, wdCrystPos.y - 11, 110, 22);
-
-        ctx.font = '700 9px "JetBrains Mono", monospace';
-        ctx.fillStyle = '#00f0ff';
-        ctx.textAlign = 'center';
-        ctx.fillText(
-          lang === 'cs'
-            ? 'Krystalizace jádra C/O (větev Q)'
-            : 'Coulomb C/O Crystallization (Q-Branch)',
-          wdCrystPos.x,
-          wdCrystPos.y + 3
-        );
-      }
-
+      // Crystallizing massive white dwarfs (Q branch; Tremblay et al. 2019, Cheng et al. 2019)
+      const qPos = coords.toCanvas(10000, 6e-4);
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.12)';
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 1.2;
+      ctx.fillRect(qPos.x - 6, qPos.y - 6, 12, 12);
+      ctx.strokeRect(qPos.x - 6, qPos.y - 6, 12, 12);
+      ctx.font = '700 9px "JetBrains Mono", monospace';
+      ctx.fillStyle = '#00f0ff';
+      ctx.fillText(t('canvasCrystallization'), qPos.x + 12, qPos.y + 3);
       ctx.restore();
     }
 
-    // 4c. Draw Compact Relativistic Remnants (Neutron Stars & Black Hole X-ray Binaries)
+    // 5. Compact remnants annotations
     if (showRelativisticRemnants) {
       ctx.save();
-      ctx.beginPath();
-      ctx.rect(plotLeft, plotTop, plotW, plotH);
-      ctx.clip();
+      clipToPlot();
+      // Neutron stars are far hotter and smaller than anything on this chart
+      const nsPos = coords.toCanvas(DEFAULT_BOUNDS.maxTemp, 0.03);
+      ctx.font = '700 9px "JetBrains Mono", monospace';
+      ctx.fillStyle = '#e9d5ff';
+      ctx.textAlign = 'left';
+      ctx.fillText(t('canvasNeutronStars'), nsPos.x + 22, nsPos.y + 3);
 
-      // 1. Neutron Star / Pulsar Regime (Extreme Upper-Left sub-luminous)
-      const nsPos = coords.toCanvas(38000, 0.0003);
-      if (coords.isInPlotBounds(nsPos.x, nsPos.y)) {
-        ctx.strokeStyle = '#c084fc';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([3, 3]);
-        ctx.strokeRect(nsPos.x - 70, nsPos.y - 16, 140, 32);
-        ctx.fillStyle = 'rgba(168, 85, 247, 0.15)';
-        ctx.fillRect(nsPos.x - 70, nsPos.y - 16, 140, 32);
-        ctx.setLineDash([]);
-
-        ctx.font = '700 9px "Orbitron", sans-serif';
-        ctx.fillStyle = '#e9d5ff';
-        ctx.textAlign = 'center';
-        ctx.fillText(
-          lang === 'cs' ? 'NEUTRONOVÉ HVĚZDY (PULSARY)' : 'NEUTRON STARS (PULSARS)',
-          nsPos.x,
-          nsPos.y - 2
-        );
-        ctx.font = '500 8px "JetBrains Mono", monospace';
-        ctx.fillStyle = '#f3e8ff';
-        ctx.fillText('R ~ 11 km • M <= 2.16 M☉', nsPos.x, nsPos.y + 10);
-      }
-
-      // 2. Black Hole X-ray Binary Accretion Locus (e.g. Cygnus X-1 companion domain)
-      const bhPos = coords.toCanvas(31000, 210000);
-      if (coords.isInPlotBounds(bhPos.x, bhPos.y)) {
+      const cyg = famousStars.find((s) => s.id === 'cygnus_x1');
+      if (cyg) {
+        const bhPos = coords.toCanvas(cyg.temp, cyg.lum);
         ctx.strokeStyle = '#f43f5e';
-        ctx.lineWidth = 1.8;
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(bhPos.x, bhPos.y, 22, 0, Math.PI * 2);
+        ctx.arc(bhPos.x, bhPos.y, 16, 0, Math.PI * 2);
         ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(bhPos.x, bhPos.y, 14, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.font = '700 9px "Orbitron", sans-serif';
         ctx.fillStyle = '#fda4af';
-        ctx.textAlign = 'left';
-        ctx.fillText(
-          lang === 'cs'
-            ? 'Akreční disk černé díry (Cygnus X-1, T ~ 10^7 K)'
-            : 'Black Hole Accretion Disk (Cygnus X-1, T ~ 10^7 K)',
-          bhPos.x + 28,
-          bhPos.y + 4
-        );
+        ctx.fillText(t('canvasCygX1'), bhPos.x + 22, bhPos.y + 22);
       }
-
-      // 3. Chandrasekhar & TOV Demarcation Line in Corner
-      ctx.font = '600 9px "JetBrains Mono", monospace';
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-      ctx.textAlign = 'right';
-      ctx.fillText(
-        lang === 'cs'
-          ? 'Meze: Chandrasekhar 1,44 M☉ | TOV ~2,16 M☉'
-          : 'Limits: Chandrasekhar 1.44 M☉ | TOV ~2.16 M☉',
-        plotRight - 12,
-        plotBottom - 10
-      );
-
       ctx.restore();
+
+      ctx.font = '600 9px "JetBrains Mono", monospace';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.textAlign = 'left';
+      ctx.fillText(t('canvasMassLimits'), plotLeft + 12, plotBottom - 52);
     }
 
-    // 5. Draw Tactical Coordinate Grid & Telemetry Lines
+    // 6. Grid and axis labels
     ctx.save();
-    ctx.strokeStyle = 'rgba(0, 170, 255, 0.1)';
     ctx.lineWidth = 1;
-
-    // Luminosity Grid (Horizontal)
-    const lumTicks = [1000000, 10000, 100, 1, 0.01, 0.0001];
-    for (let lum of lumTicks) {
+    ctx.font = '500 10px "JetBrains Mono", monospace';
+    for (const lum of [1e6, 1e4, 1e2, 1, 1e-2, 1e-4]) {
       const p = coords.toCanvas(10000, lum);
-      if (p.y >= plotTop && p.y <= plotBottom) {
-        ctx.beginPath();
-        ctx.moveTo(plotLeft, p.y);
-        ctx.lineTo(plotRight, p.y);
-        ctx.stroke();
+      if (p.y < plotTop || p.y > plotBottom) continue;
+      ctx.strokeStyle = 'rgba(0, 170, 255, 0.1)';
+      ctx.beginPath();
+      ctx.moveTo(plotLeft, p.y);
+      ctx.lineTo(plotRight, p.y);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+      ctx.beginPath();
+      ctx.moveTo(plotLeft, p.y);
+      ctx.lineTo(plotLeft + 5, p.y);
+      ctx.moveTo(plotRight - 5, p.y);
+      ctx.lineTo(plotRight, p.y);
+      ctx.stroke();
 
-        // Ticks
-        ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
-        ctx.beginPath();
-        ctx.moveTo(plotLeft, p.y);
-        ctx.lineTo(plotLeft + 5, p.y);
-        ctx.moveTo(plotRight - 5, p.y);
-        ctx.lineTo(plotRight, p.y);
-        ctx.stroke();
-        ctx.strokeStyle = 'rgba(0, 170, 255, 0.1)';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#00f0ff';
+      ctx.textAlign = 'right';
+      const exp = Math.round(Math.log10(lum));
+      ctx.fillText(exp === 0 ? '1' : `10${exp < 0 ? '⁻' : ''}${String(Math.abs(exp)).split('').map((d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]).join('')}`, plotLeft - 8, p.y);
 
-        // Left axis labels: L / L_sun
-        ctx.font = '500 10px "JetBrains Mono", monospace';
-        ctx.fillStyle = '#00f0ff';
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'middle';
-        let label = lum >= 1 ? `${lum.toLocaleString()} L☉` : `${lum} L☉`;
-        if (lum === 1) label = lang === 'cs' ? '1,0 L☉ [SLUNCE]' : '1.0 L☉ [SOL]';
-        ctx.fillText(label, plotLeft - 8, p.y);
-
-        // Right axis labels: Absolute Magnitude M_V
-        const absMag = HRCoordinates.lumToAbsMag(lum);
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'left';
-        ctx.fillText(`${absMag > 0 ? '+' : ''}${absMag.toFixed(1)} Mv`, plotRight + 8, p.y);
-      }
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'left';
+      const mbol = HRCoordinates.lumToBolMag(lum);
+      ctx.fillText(`${mbol < 0 ? '−' : '+'}${formatSig(Math.abs(mbol), lang, 3)}`, plotRight + 8, p.y);
     }
-
-    // Temperature Grid (Vertical)
-    const tempTicks = [40000, 30000, 20000, 10000, 7500, 6000, 5000, 4000, 3000, 2000];
-    for (let t of tempTicks) {
-      const p = coords.toCanvas(t, 1);
-      if (p.x >= plotLeft && p.x <= plotRight) {
-        ctx.beginPath();
-        ctx.moveTo(p.x, plotTop);
-        ctx.lineTo(p.x, plotBottom);
-        ctx.stroke();
-
-        // Ticks
-        ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
-        ctx.beginPath();
-        ctx.moveTo(p.x, plotTop);
-        ctx.lineTo(p.x, plotTop + 5);
-        ctx.moveTo(p.x, plotBottom - 5);
-        ctx.lineTo(p.x, plotBottom);
-        ctx.stroke();
-        ctx.strokeStyle = 'rgba(0, 170, 255, 0.1)';
-
-        // Bottom axis labels
-        ctx.font = '500 10px "JetBrains Mono", monospace';
-        ctx.fillStyle = '#d9e6f7';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillText(`${(t / 1000).toFixed(t < 10000 && t % 1000 !== 0 ? 1 : 0)}k K`, p.x, plotBottom + 8);
-      }
+    let lastTickX = -Infinity;
+    for (const tK of [40000, 30000, 20000, 10000, 7500, 6000, 5000, 4000, 3000, 2000]) {
+      const p = coords.toCanvas(tK, 1);
+      if (p.x < plotLeft || p.x > plotRight) continue;
+      // Skip labels that would collide with the previous one on narrow canvases
+      const showLabel = p.x - lastTickX > 44;
+      if (showLabel) lastTickX = p.x;
+      ctx.strokeStyle = 'rgba(0, 170, 255, 0.1)';
+      ctx.beginPath();
+      ctx.moveTo(p.x, plotTop);
+      ctx.lineTo(p.x, plotBottom);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+      ctx.beginPath();
+      ctx.moveTo(p.x, plotTop);
+      ctx.lineTo(p.x, plotTop + 5);
+      ctx.moveTo(p.x, plotBottom - 5);
+      ctx.lineTo(p.x, plotBottom);
+      ctx.stroke();
+      ctx.fillStyle = '#d9e6f7';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      if (showLabel) ctx.fillText(formatInt(tK, lang), p.x, plotBottom + 8);
     }
     ctx.restore();
 
-    // 6. Draw Spectral Class Header Bar (Spaceship Astrometrics HUD Ribbon)
+    // 7. Spectral class ribbon
     ctx.save();
     const headerY = plotTop - 32;
     const headerHeight = 24;
-
-    for (let spec of SPECTRAL_CLASSES) {
-      const pLeft = coords.toCanvas(spec.tempRange[1], 1).x;
-      const pRight = coords.toCanvas(spec.tempRange[0], 1).x;
-
-      const clampedL = Math.max(plotLeft, Math.min(plotRight, pLeft));
-      const clampedR = Math.max(plotLeft, Math.min(plotRight, pRight));
-
-      if (clampedR > clampedL) {
-        // Holographic cell background
-        ctx.fillStyle = 'rgba(0, 20, 48, 0.7)';
-        ctx.fillRect(clampedL, headerY, clampedR - clampedL, headerHeight);
-
-        // Tech borders
-        ctx.strokeStyle = 'rgba(0, 240, 255, 0.35)';
-        ctx.strokeRect(clampedL, headerY, clampedR - clampedL, headerHeight);
-
-        // Accent top bar
-        ctx.fillStyle = spec.color;
-        ctx.fillRect(clampedL + 1, headerY, clampedR - clampedL - 2, 2.5);
-
-        // Text label
+    for (const spec of SPECTRAL_CLASSES) {
+      const left = Math.max(plotLeft, Math.min(plotRight, coords.toCanvas(spec.tempRange[1], 1).x));
+      const right = Math.max(plotLeft, Math.min(plotRight, coords.toCanvas(spec.tempRange[0], 1).x));
+      if (right - left < 2) continue;
+      ctx.fillStyle = 'rgba(0, 20, 48, 0.7)';
+      ctx.fillRect(left, headerY, right - left, headerHeight);
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.35)';
+      ctx.strokeRect(left, headerY, right - left, headerHeight);
+      ctx.fillStyle = spec.color;
+      ctx.fillRect(left + 1, headerY, right - left - 2, 2.5);
+      if (right - left > 14) {
         ctx.font = '700 12px "Orbitron", sans-serif';
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`${lang === 'cs' ? 'TŘÍDA' : 'CLASS'} ${spec.class}`, (clampedL + clampedR) / 2, headerY + headerHeight / 2 + 1);
+        ctx.fillText(spec.class, (left + right) / 2, headerY + headerHeight / 2 + 1);
       }
     }
     ctx.restore();
 
-    // 7. Draw Background Stellar Population (Real Hipparcos stars)
+    // 8. Background population (Hipparcos stars with parallax errors < 10 %)
     if (showBackgroundPopulation && backgroundStars && backgroundStars.length > 0) {
       ctx.save();
-      ctx.beginPath();
-      ctx.rect(plotLeft, plotTop, plotW, plotH);
-      ctx.clip();
-
-      for (let star of backgroundStars) {
-        const [temp, lum, , , specClass] = star;
-
+      clipToPlot();
+      for (const [temp, lum, specClass] of backgroundStars) {
         if (filterClass !== 'ALL' && specClass !== filterClass) continue;
-
         const pos = coords.toCanvas(temp, lum);
         if (!coords.isInPlotBounds(pos.x, pos.y)) continue;
-
         const rgb = temperatureToRGB(temp);
         ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.65)`;
         ctx.beginPath();
@@ -544,366 +418,285 @@ export default function HRCanvas({
       ctx.restore();
     }
 
-    // 8. Draw Cluster Isochrone & Turn-Off in Cluster Mode
+    // 9. Cluster isochrone and turn-off
     if (activeMode === 'cluster' && clusterIsochrone && clusterIsochrone.points) {
       ctx.save();
-      ctx.beginPath();
-      ctx.rect(plotLeft, plotTop, plotW, plotH);
-      ctx.clip();
-
+      clipToPlot();
+      const { points, postMsIndex, turnoff } = clusterIsochrone;
       ctx.strokeStyle = '#00f0ff';
       ctx.lineWidth = 2.5;
       ctx.shadowColor = '#00f0ff';
       ctx.shadowBlur = 14;
+      const drawSegment = (segment, dashed) => {
+        ctx.setLineDash(dashed ? [6, 5] : []);
+        ctx.beginPath();
+        segment.forEach((pt, i) => {
+          const p = coords.toCanvas(pt.temp, pt.lum);
+          if (i === 0) ctx.moveTo(p.x, p.y);
+          else ctx.lineTo(p.x, p.y);
+        });
+        ctx.stroke();
+      };
+      drawSegment(points.slice(0, postMsIndex + 1), false);
+      drawSegment(points.slice(postMsIndex), true);
+      ctx.setLineDash([]);
+      ctx.shadowBlur = 0;
 
-      ctx.beginPath();
-      let first = true;
-      for (let pt of clusterIsochrone.points) {
-        const p = coords.toCanvas(pt.temp, pt.lum);
-        if (first) {
-          ctx.moveTo(p.x, p.y);
-          first = false;
-        } else {
-          ctx.lineTo(p.x, p.y);
-        }
-      }
-      ctx.stroke();
-
-      // Draw Turn-Off Point HUD Target
-      const to = clusterIsochrone.turnoff;
-      const toPos = coords.toCanvas(to.tempK, to.lumLsun);
-      
-      // Outer Target Reticle
+      const toPos = coords.toCanvas(turnoff.tempK, turnoff.lumLsun);
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.arc(toPos.x, toPos.y, 10, 0, Math.PI * 2);
       ctx.stroke();
-
       ctx.fillStyle = '#00f0ff';
       ctx.beginPath();
       ctx.arc(toPos.x, toPos.y, 4, 0, Math.PI * 2);
       ctx.fill();
-
       ctx.font = '700 11px "JetBrains Mono", monospace';
       ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'left';
-      ctx.fillText(lang === 'cs' ? `[ BOD OBRATU: ~${to.massMsun} M☉ ]` : `[ TURN-OFF: ~${to.massMsun} M☉ ]`, toPos.x + 14, toPos.y + 4);
+      ctx.fillText(t('canvasTurnoff', { mass: formatSig(turnoff.massMsun, lang, 2) }), toPos.x + 14, toPos.y + 4);
 
-      // Draw real observational cluster member stars from catalog if available
-      const activeClusterKey = clusterAgeGyr < 0.35 ? 'pleiades' : (clusterAgeGyr < 2.0 ? 'hyades' : null);
-      const activeMembers = activeClusterKey && clusterMembers ? clusterMembers[activeClusterKey] : null;
-
-      if (activeMembers && activeMembers.length > 0) {
-        ctx.save();
-        for (let member of activeMembers) {
-          const [temp, lum, , , , , name] = member;
+      // Real members of the cluster closest in age
+      const activeClusterKey = clusterAgeGyr < 0.3 ? 'pleiades' : clusterAgeGyr < 1.5 ? 'hyades' : null;
+      const members = activeClusterKey && clusterMembers ? clusterMembers[activeClusterKey] : null;
+      if (members && members.length > 0) {
+        const color = activeClusterKey === 'pleiades' ? '#00f0ff' : '#ffbe80';
+        for (const [temp, lum, , , name] of members) {
           const pos = coords.toCanvas(temp, lum);
           if (!coords.isInPlotBounds(pos.x, pos.y)) continue;
-
-          const rgb = temperatureToRGB(temp);
-          ctx.strokeStyle = activeClusterKey === 'pleiades' ? '#00f0ff' : '#ffbe80';
+          ctx.strokeStyle = color;
           ctx.lineWidth = 1.2;
           ctx.beginPath();
           ctx.arc(pos.x, pos.y, 5, 0, Math.PI * 2);
           ctx.stroke();
-
-          ctx.fillStyle = rgb.css;
+          ctx.fillStyle = temperatureToRGB(temp).css;
           ctx.beginPath();
           ctx.arc(pos.x, pos.y, 2.5, 0, Math.PI * 2);
           ctx.fill();
-
           if (name) {
             ctx.font = '600 10px "JetBrains Mono", monospace';
-            ctx.fillStyle = activeClusterKey === 'pleiades' ? '#00f0ff' : '#ffbe80';
+            ctx.fillStyle = color;
             ctx.fillText(name, pos.x + 8, pos.y + 3);
           }
         }
-        ctx.restore();
+        ctx.font = '600 10px "JetBrains Mono", monospace';
+        ctx.fillStyle = color;
+        ctx.textAlign = 'right';
+        ctx.fillText(t(activeClusterKey === 'pleiades' ? 'canvasPleiadesMembers' : 'canvasHyadesMembers'), plotRight - 12, plotTop + 18);
       }
-
       ctx.restore();
     }
 
-    // 9. Draw Stellar Evolution Track in Evolution Mode
+    // 10. Evolutionary track
     if (activeMode === 'evolution' && evolutionTrackPoints && evolutionTrackPoints.length > 0) {
       ctx.save();
-      ctx.beginPath();
-      ctx.rect(plotLeft, plotTop, plotW, plotH);
-      ctx.clip();
-
-      // Track trajectory line
+      clipToPlot();
+      const drawable = evolutionTrackPoints.filter((s) => s.temp !== null);
       ctx.strokeStyle = '#00f0ff';
       ctx.lineWidth = 2.5;
       ctx.setLineDash([5, 3]);
       ctx.shadowColor = '#00f0ff';
       ctx.shadowBlur = 10;
-
       ctx.beginPath();
-      evolutionTrackPoints.forEach((step, idx) => {
-        const p = coords.toCanvas(step.temp, step.lum);
-        if (idx === 0) ctx.moveTo(p.x, p.y);
+      drawable.forEach((s, i) => {
+        const p = coords.toCanvas(s.temp, s.lum);
+        if (i === 0) ctx.moveTo(p.x, p.y);
         else ctx.lineTo(p.x, p.y);
       });
       ctx.stroke();
       ctx.setLineDash([]);
-
-      // Milestones along track
-      evolutionTrackPoints.forEach((step) => {
-        const p = coords.toCanvas(step.temp, step.lum);
+      ctx.shadowBlur = 0;
+      for (const s of drawable) {
+        const p = coords.toCanvas(s.temp, s.lum);
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
         ctx.fill();
-      });
-
-      // Current animated position marker
-      if (evolutionState) {
-        const curPos = coords.toCanvas(evolutionState.temp, evolutionState.lum);
-        const rgb = temperatureToRGB(evolutionState.temp);
-
-        // Tactical Reticle Crosshairs around current star
-        ctx.strokeStyle = '#00f0ff';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(curPos.x, curPos.y, 14, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Crosshairs
-        ctx.beginPath();
-        ctx.moveTo(curPos.x - 18, curPos.y); ctx.lineTo(curPos.x - 10, curPos.y);
-        ctx.moveTo(curPos.x + 10, curPos.y); ctx.lineTo(curPos.x + 18, curPos.y);
-        ctx.moveTo(curPos.x, curPos.y - 18); ctx.lineTo(curPos.x, curPos.y - 10);
-        ctx.moveTo(curPos.x, curPos.y + 10); ctx.lineTo(curPos.x, curPos.y + 18);
-        ctx.stroke();
-
-        ctx.fillStyle = rgb.css;
-        ctx.shadowColor = rgb.css;
-        ctx.shadowBlur = 20;
-        ctx.beginPath();
-        ctx.arc(curPos.x, curPos.y, 6, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.font = '700 12px "Orbitron", sans-serif';
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'left';
-        ctx.fillText(`// ${translateStageName(evolutionState.stage).toUpperCase()}`, curPos.x + 22, curPos.y + 4);
       }
 
+      if (evolutionState) {
+        const label = `${lang === 'cs' ? evolutionState.stageCs : evolutionState.stage}`;
+        ctx.font = '700 12px "Orbitron", sans-serif';
+        ctx.textAlign = 'left';
+        if (evolutionState.noPhotosphere) {
+          ctx.fillStyle = '#fda4af';
+          ctx.fillText(t('canvasNoPhotosphere'), plotLeft + 14, plotTop + 22);
+        } else {
+          let pos = coords.toCanvas(evolutionState.temp, evolutionState.lum);
+          const outside = !coords.isInPlotBounds(pos.x, pos.y);
+          if (outside) {
+            // Pin to the nearest edge and point outwards
+            pos = { x: Math.max(plotLeft + 14, Math.min(plotRight - 14, pos.x)), y: Math.max(plotTop + 14, Math.min(plotBottom - 14, pos.y)) };
+          }
+          const rgb = temperatureToRGB(evolutionState.temp);
+          ctx.strokeStyle = '#00f0ff';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, 14, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(pos.x - 18, pos.y); ctx.lineTo(pos.x - 10, pos.y);
+          ctx.moveTo(pos.x + 10, pos.y); ctx.lineTo(pos.x + 18, pos.y);
+          ctx.moveTo(pos.x, pos.y - 18); ctx.lineTo(pos.x, pos.y - 10);
+          ctx.moveTo(pos.x, pos.y + 10); ctx.lineTo(pos.x, pos.y + 18);
+          ctx.stroke();
+          ctx.fillStyle = rgb.css;
+          ctx.shadowColor = rgb.css;
+          ctx.shadowBlur = 20;
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = '#ffffff';
+          const text = outside ? `${label} ${t('canvasOffScale')}` : label;
+          const textWidth = ctx.measureText(text).width;
+          const rightSide = pos.x + 22 + textWidth < plotRight;
+          ctx.textAlign = rightSide ? 'left' : 'right';
+          ctx.fillText(text, rightSide ? pos.x + 22 : pos.x - 22, pos.y + 4);
+        }
+      }
       ctx.restore();
     }
 
-    // 10. Draw Famous Stars (Astrometrics Tactical Targets)
+    // 11. Catalogue stars
     ctx.save();
-    ctx.beginPath();
-    ctx.rect(plotLeft, plotTop, plotW, plotH);
-    ctx.clip();
-
-    for (let star of famousStars) {
-      if (filterClass !== 'ALL' && (!star.spectralType || !star.spectralType.startsWith(filterClass))) continue;
-      if (filterPlanetsOnly && !star.hasExoplanets) continue;
-      if (filterSearch && !star.name.toLowerCase().includes(filterSearch.toLowerCase())) continue;
-      if (star.isExotic && !showRelativisticRemnants) continue;
-
-      const pos = coords.toCanvas(star.temp, star.lum);
+    clipToPlot();
+    for (const star of famousStars) {
+      if (!isVisible(star, filters)) continue;
+      const pos = starPosition(coords, star);
       if (!coords.isInPlotBounds(pos.x, pos.y)) continue;
 
       const rgb = temperatureToRGB(star.temp);
       const isSelected = selectedStar && selectedStar.id === star.id;
       const isHovered = hoveredStar && hoveredStar.id === star.id;
-
       let dotRadius = 4;
       if (star.luminosityClass === 'I') dotRadius = 6.5;
-      else if (star.luminosityClass === 'III') dotRadius = 5.2;
+      else if (star.luminosityClass === 'III' || star.luminosityClass === 'II') dotRadius = 5.2;
       else if (star.luminosityClass === 'D') dotRadius = 3.2;
 
-      // Spaceship Astrometrics Reticle for Selected or Hovered Target
       if (isSelected || isHovered) {
-        const reticleR = dotRadius + 8;
+        const r = dotRadius + 8;
+        const c = 5;
         ctx.strokeStyle = isSelected ? '#00f0ff' : '#ffffff';
         ctx.lineWidth = 1.5;
-
-        // Bracket corners
-        const cornerLen = 5;
-        // Top-left
         ctx.beginPath();
-        ctx.moveTo(pos.x - reticleR, pos.y - reticleR + cornerLen);
-        ctx.lineTo(pos.x - reticleR, pos.y - reticleR);
-        ctx.lineTo(pos.x - reticleR + cornerLen, pos.y - reticleR);
-        // Top-right
-        ctx.moveTo(pos.x + reticleR - cornerLen, pos.y - reticleR);
-        ctx.lineTo(pos.x + reticleR, pos.y - reticleR);
-        ctx.lineTo(pos.x + reticleR, pos.y - reticleR + cornerLen);
-        // Bottom-left
-        ctx.moveTo(pos.x - reticleR, pos.y + reticleR - cornerLen);
-        ctx.lineTo(pos.x - reticleR, pos.y + reticleR);
-        ctx.lineTo(pos.x - reticleR + cornerLen, pos.y + reticleR);
-        // Bottom-right
-        ctx.moveTo(pos.x + reticleR - cornerLen, pos.y + reticleR);
-        ctx.lineTo(pos.x + reticleR, pos.y + reticleR);
-        ctx.lineTo(pos.x + reticleR, pos.y + reticleR - cornerLen);
+        ctx.moveTo(pos.x - r, pos.y - r + c); ctx.lineTo(pos.x - r, pos.y - r); ctx.lineTo(pos.x - r + c, pos.y - r);
+        ctx.moveTo(pos.x + r - c, pos.y - r); ctx.lineTo(pos.x + r, pos.y - r); ctx.lineTo(pos.x + r, pos.y - r + c);
+        ctx.moveTo(pos.x - r, pos.y + r - c); ctx.lineTo(pos.x - r, pos.y + r); ctx.lineTo(pos.x - r + c, pos.y + r);
+        ctx.moveTo(pos.x + r - c, pos.y + r); ctx.lineTo(pos.x + r, pos.y + r); ctx.lineTo(pos.x + r, pos.y + r - c);
         ctx.stroke();
-
-        // Pulsing glow
         ctx.shadowColor = isSelected ? '#00f0ff' : '#ffffff';
         ctx.shadowBlur = 16;
       }
 
-      // Star Core Circle
-      ctx.fillStyle = rgb.css;
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, dotRadius, 0, Math.PI * 2);
-      ctx.fill();
+      if (pos.offScale) {
+        // Off-scale object: arrow pointing to the hot side
+        ctx.fillStyle = '#c084fc';
+        ctx.beginPath();
+        ctx.moveTo(pos.x - 2, pos.y);
+        ctx.lineTo(pos.x + 10, pos.y - 6);
+        ctx.lineTo(pos.x + 10, pos.y + 6);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        ctx.fillStyle = rgb.css;
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, dotRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, dotRadius * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
 
-      // Star Sparkle
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, dotRadius * 0.4, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Star Name Label
       if (showFamousLabels || isSelected || isHovered) {
         ctx.font = isSelected ? '700 11px "JetBrains Mono", monospace' : '500 10px "JetBrains Mono", monospace';
         ctx.fillStyle = isSelected ? '#00f0ff' : '#ffffff';
         ctx.shadowColor = '#000000';
         ctx.shadowBlur = 4;
         ctx.textAlign = 'left';
-        ctx.fillText(star.name, pos.x + dotRadius + 8, pos.y + 3);
+        ctx.fillText(pos.offScale ? `${star.name} (${formatInt(star.temp, lang)} K)` : star.name, pos.x + dotRadius + 8, pos.y + 3);
+        ctx.shadowBlur = 0;
       }
     }
     ctx.restore();
 
-    // 11. Astrometrics Viewport HUD Frame & Corner Brackets
+    // 12. Frame and axis titles
     ctx.strokeStyle = 'rgba(0, 240, 255, 0.45)';
     ctx.lineWidth = 1.5;
     ctx.strokeRect(plotLeft, plotTop, plotW, plotH);
-
-    // Tactical Corner Notches
     const cSize = 16;
     ctx.strokeStyle = '#00f0ff';
     ctx.lineWidth = 3;
+    for (const [x, y, dx, dy] of [[plotLeft, plotTop, 1, 1], [plotRight, plotTop, -1, 1], [plotLeft, plotBottom, 1, -1], [plotRight, plotBottom, -1, -1]]) {
+      ctx.beginPath();
+      ctx.moveTo(x, y + dy * cSize);
+      ctx.lineTo(x, y);
+      ctx.lineTo(x + dx * cSize, y);
+      ctx.stroke();
+    }
 
-    // Top-Left corner
-    ctx.beginPath();
-    ctx.moveTo(plotLeft, plotTop + cSize);
-    ctx.lineTo(plotLeft, plotTop);
-    ctx.lineTo(plotLeft + cSize, plotTop);
-    ctx.stroke();
-
-    // Top-Right corner
-    ctx.beginPath();
-    ctx.moveTo(plotRight - cSize, plotTop);
-    ctx.lineTo(plotRight, plotTop);
-    ctx.lineTo(plotRight, plotTop + cSize);
-    ctx.stroke();
-
-    // Bottom-Left corner
-    ctx.beginPath();
-    ctx.moveTo(plotLeft, plotBottom - cSize);
-    ctx.lineTo(plotLeft, plotBottom);
-    ctx.lineTo(plotLeft + cSize, plotBottom);
-    ctx.stroke();
-
-    // Bottom-Right corner
-    ctx.beginPath();
-    ctx.moveTo(plotRight - cSize, plotBottom);
-    ctx.lineTo(plotRight, plotBottom);
-    ctx.lineTo(plotRight, plotBottom - cSize);
-    ctx.stroke();
-
-    // Telemetry Axis Titles
     ctx.font = '700 11px "Orbitron", sans-serif';
     ctx.fillStyle = '#00f0ff';
-
-    // Bottom Axis: Effective Temperature
     ctx.textAlign = 'center';
-    ctx.fillText(
-      lang === 'cs'
-        ? '◄ HORKÉ (MODRÉ) ──── EFEKTIVNÍ POVRCHOVÁ TEPLOTA (KELVIN) ──── CHLADNÉ (ČERVENÉ) ►'
-        : '◄ HOT (BLUE) ──── EFFECTIVE SURFACE TEMPERATURE (KELVIN) ──── COOL (RED) ►',
-      plotLeft + plotW / 2,
-      height - 12
-    );
-
-    // Top Axis: Spectral Classification
-    ctx.fillText(
-      lang === 'cs'
-        ? 'HARVARDSKÁ SPEKTRÁLNÍ KLASIFIKACE'
-        : 'HARVARD SPECTRAL CLASSIFICATION',
-      plotLeft + plotW / 2,
-      22
-    );
-
-    // Left Axis: Luminosity
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(t('axisTemperature'), plotLeft + plotW / 2, height - 12);
+    ctx.font = '700 9px "Orbitron", sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(t('axisSpectral'), plotLeft - 6, plotTop - 16);
+    ctx.font = '700 11px "Orbitron", sans-serif';
+    ctx.textAlign = 'center';
     ctx.save();
     ctx.translate(22, plotTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillText(
-      lang === 'cs'
-        ? 'LUMINOSITA (L / L☉)'
-        : 'LUMINOSITY (L / L☉)',
-      0,
-      0
-    );
+    ctx.fillText(t('axisLuminosity'), 0, 0);
     ctx.restore();
-
-    // Right Axis: Absolute Magnitude
     ctx.save();
     ctx.translate(width - 15, plotTop + plotH / 2);
     ctx.rotate(Math.PI / 2);
-    ctx.fillText(
-      lang === 'cs'
-        ? 'ABSOLUTNÍ VIZUÁLNÍ MAGNITUDA (Mv)'
-        : 'ABSOLUTE VISUAL MAGNITUDE (Mv)',
-      0,
-      0
-    );
+    ctx.fillText(t('axisBolometricMag'), 0, 0);
     ctx.restore();
-
   }, [
-    zoom,
-    pan,
-    dimensions,
-    famousStars,
-    backgroundStars,
-    selectedStar,
-    hoveredStar,
-    activeMode,
-    evolutionState,
-    evolutionTrackPoints,
-    clusterIsochrone,
-    clusterMembers,
-    clusterAgeGyr,
-    filterClass,
-    filterPlanetsOnly,
-    filterSearch,
-    showIsoradii,
-    showRegions,
-    showBackgroundPopulation,
-    showFamousLabels,
-    showGaiaFineStructure,
-    showRelativisticRemnants,
-    lang,
-    translateStageName
+    zoom, pan, dimensions, famousStars, backgroundStars, selectedStar, hoveredStar, activeMode,
+    evolutionState, evolutionTrackPoints, clusterIsochrone, clusterMembers, clusterAgeGyr,
+    filters, filterClass, filterPlanetsOnly, filterSearch, showIsoradii, showRegions, showBackgroundPopulation,
+    showFamousLabels, showGaiaFineStructure, showRelativisticRemnants, lang, t
   ]);
 
-  // Robust pointer interaction handlers: reliable drag and click without sticky dragging
-  const handlePointerDown = (e) => {
-    if (e.button !== 0) return; // Only track primary left mouse button
-    const canvas = canvasRef.current;
-    if (canvas && canvas.setPointerCapture) {
-      try {
-        canvas.setPointerCapture(e.pointerId);
-      } catch {}
+  const coordsForRect = (rect) => {
+    const coords = new HRCoordinates(rect.width, rect.height, MARGINS);
+    coords.setTransform(zoom, pan.x, pan.y);
+    return coords;
+  };
+
+  // Nearest visible catalogue star to a point within maxDist pixels
+  const hitTest = (x, y, rect, maxDist) => {
+    const coords = coordsForRect(rect);
+    let found = null;
+    let minD = maxDist;
+    for (const star of famousStars) {
+      if (!isVisible(star, filters)) continue;
+      const p = starPosition(coords, star);
+      if (!coords.isInPlotBounds(p.x, p.y)) continue;
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (d < minD) {
+        minD = d;
+        found = star;
+      }
     }
-    dragRef.current = {
-      isDown: true,
-      hasMoved: false,
-      startX: e.clientX,
-      startY: e.clientY,
-      panX: pan.x,
-      panY: pan.y
-    };
+    return found;
+  };
+
+  const handlePointerDown = (e) => {
+    if (e.button !== 0) return;
+    try {
+      canvasRef.current?.setPointerCapture(e.pointerId);
+    } catch {
+      // pointer capture is optional
+    }
+    dragRef.current = { isDown: true, hasMoved: false, startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y };
   };
 
   const handlePointerMove = (e) => {
@@ -917,191 +710,114 @@ export default function HRCanvas({
     if (dragRef.current.isDown) {
       const dx = e.clientX - dragRef.current.startX;
       const dy = e.clientY - dragRef.current.startY;
-      if (!dragRef.current.hasMoved && Math.hypot(dx, dy) > 4) {
-        dragRef.current.hasMoved = true;
-      }
+      if (!dragRef.current.hasMoved && Math.hypot(dx, dy) > 4) dragRef.current.hasMoved = true;
       if (dragRef.current.hasMoved) {
-        setPan({
-          x: dragRef.current.panX + dx,
-          y: dragRef.current.panY + dy
-        });
+        setPan({ x: dragRef.current.panX + dx, y: dragRef.current.panY + dy });
+        setHoveredStar(null);
         return;
       }
     }
+    if (e.pointerType === 'mouse') setHoveredStar(hitTest(x, y, rect, 18));
+  };
 
-    // Hit test visible famous stars for hover (only reacting to stars visible in current view)
-    const coords = new HRCoordinates(rect.width, rect.height, { top: 68, right: 75, bottom: 65, left: 85 });
-    coords.setTransform(zoom, pan.x, pan.y);
-
-    let found = null;
-    let minD = 18;
-
-    for (let star of famousStars) {
-      // Honor all active filters - do not react on filtered stars
-      if (filterClass !== 'ALL' && (!star.spectralType || !star.spectralType.startsWith(filterClass))) continue;
-      if (filterPlanetsOnly && !star.hasExoplanets) continue;
-      if (filterSearch && !star.name.toLowerCase().includes(filterSearch.toLowerCase())) continue;
-      if (star.isExotic && !showRelativisticRemnants) continue;
-
-      const p = coords.toCanvas(star.temp, star.lum);
-      if (!coords.isInPlotBounds(p.x, p.y)) continue;
-
-      const dist = Math.hypot(p.x - x, p.y - y);
-      if (dist < minD) {
-        minD = dist;
-        found = star;
-      }
+  const endDrag = (e) => {
+    dragRef.current.isDown = false;
+    dragRef.current.hasMoved = false;
+    try {
+      canvasRef.current?.releasePointerCapture(e.pointerId);
+    } catch {
+      // pointer capture is optional
     }
-    setHoveredStar(found);
   };
 
   const handlePointerUp = (e) => {
     const wasDragging = dragRef.current.hasMoved;
-    dragRef.current.isDown = false;
-    dragRef.current.hasMoved = false;
-
+    endDrag(e);
+    if (wasDragging) return;
     const canvas = canvasRef.current;
-    if (canvas && canvas.releasePointerCapture) {
-      try {
-        canvas.releasePointerCapture(e.pointerId);
-      } catch {}
-    }
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const target = hitTest(e.clientX - rect.left, e.clientY - rect.top, rect, e.pointerType === 'mouse' ? 18 : 26);
+    if (target) onSelectStar(target);
+  };
 
-    // Clean click on star targets star (works with hover or direct coordinate hit-test for mobile/touch)
-    if (!wasDragging) {
-      let target = hoveredStar;
-      if (!target && canvas) {
-        const rect = canvas.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const clickY = e.clientY - rect.top;
-        const coords = new HRCoordinates(rect.width, rect.height, { top: 68, right: 75, bottom: 65, left: 85 });
-        coords.setTransform(zoom, pan.x, pan.y);
-        let minD = 22;
-        for (let star of famousStars) {
-          if (filterClass !== 'ALL' && (!star.spectralType || !star.spectralType.startsWith(filterClass))) continue;
-          if (filterPlanetsOnly && !star.hasExoplanets) continue;
-          if (filterSearch && !star.name.toLowerCase().includes(filterSearch.toLowerCase())) continue;
-          if (star.isExotic && !showRelativisticRemnants) continue;
-
-          const p = coords.toCanvas(star.temp, star.lum);
-          if (!coords.isInPlotBounds(p.x, p.y)) continue;
-          const dist = Math.hypot(p.x - clickX, p.y - clickY);
-          if (dist < minD) {
-            minD = dist;
-            target = star;
-          }
-        }
-      }
-      if (target) {
-        onSelectStar(target);
-      }
+  // Keyboard: arrows pan, +/− zoom, 0 resets
+  const handleKeyDown = (e) => {
+    const step = 40;
+    const moves = { ArrowLeft: [step, 0], ArrowRight: [-step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] };
+    if (moves[e.key]) {
+      e.preventDefault();
+      const [dx, dy] = moves[e.key];
+      setPan((p) => ({ x: p.x + dx, y: p.y + dy }));
+    } else if (e.key === '+' || e.key === '=') {
+      e.preventDefault();
+      setZoom((z) => clampZoom(z * 1.25));
+    } else if (e.key === '-') {
+      e.preventDefault();
+      setZoom((z) => clampZoom(z * 0.8));
+    } else if (e.key === '0') {
+      e.preventDefault();
+      handleResetView();
     }
   };
 
-  const handlePointerCancel = (e) => {
-    dragRef.current.isDown = false;
-    dragRef.current.hasMoved = false;
-    const canvas = canvasRef.current;
-    if (canvas && canvas.releasePointerCapture) {
-      try {
-        canvas.releasePointerCapture(e.pointerId);
-      } catch {}
-    }
-  };
-
-  // Zoom handling: graph stays stable during normal mouse/wheel scrolling.
-  // Zooming via wheel requires holding Ctrl (or Meta) or clicking on-screen [+] / [-] buttons.
-  const handleWheel = (e) => {
-    if (!e.ctrlKey && !e.metaKey) {
-      // Allow normal scroll or keep graph stable
-      return;
-    }
-    e.preventDefault();
-    const delta = -e.deltaY * 0.002;
-    const factor = Math.max(0.7, Math.min(1.3, 1 + delta));
-    setZoom((prevZoom) => Math.max(0.6, Math.min(6.0, parseFloat((prevZoom * factor).toFixed(3)))));
-  };
+  // Keep the tooltip inside the canvas
+  const TOOLTIP_W = 230;
+  const TOOLTIP_H = 150;
+  const tooltipLeft = mousePos.x + 18 + TOOLTIP_W > dimensions.width ? mousePos.x - 18 - TOOLTIP_W : mousePos.x + 18;
+  const tooltipTop = Math.max(4, Math.min(dimensions.height - TOOLTIP_H, mousePos.y - 20));
 
   return (
     <div className="hr-canvas-container hud-canvas-container" ref={containerRef}>
       <canvas
         ref={canvasRef}
         className="hr-canvas"
+        role="img"
+        tabIndex={0}
+        aria-label={t('canvasAriaLabel')}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerCancel}
-        onWheel={handleWheel}
+        onPointerCancel={endDrag}
+        onPointerLeave={() => setHoveredStar(null)}
+        onKeyDown={handleKeyDown}
       />
 
-      {/* Interactive Canvas Guide & Zoom */}
-      <div className="canvas-telemetry-tl">
-        <span className="telemetry-item">{lang === 'cs' ? 'Posun: táhněte myší • Přiblížení: kolečko / tlačítka' : 'Pan: drag canvas • Zoom: wheel / buttons'}</span>
+      <div className="canvas-telemetry-tl" aria-hidden="true">
+        <span className="telemetry-item">{t('canvasHelp')}</span>
       </div>
 
-      <div className="canvas-telemetry-br">
-        <span className="telemetry-item">{t('zoomLabel')} {zoom.toFixed(2)}x</span>
-      </div>
-
-      {/* Floating Canvas Tactical Controls */}
       <div className="canvas-overlay-controls hud-canvas-controls">
-        <button
-          className="canvas-btn hud-square-btn"
-          onClick={() => setZoom((z) => Math.min(6.0, z * 1.25))}
-          title={lang === 'cs' ? 'Přiblížit' : 'Magnify (Zoom In)'}
-        >
+        <span className="canvas-zoom-readout" aria-live="polite">{t('zoomLabel')} {formatSig(zoom, lang, 3)}×</span>
+        <button type="button" className="canvas-btn hud-square-btn" onClick={() => setZoom((z) => clampZoom(z * 1.25))} title={t('zoomIn')} aria-label={t('zoomIn')}>
           +
         </button>
-        <button
-          className="canvas-btn hud-square-btn"
-          onClick={() => setZoom((z) => Math.max(0.6, z * 0.8))}
-          title={lang === 'cs' ? 'Oddálit' : 'Demagnify (Zoom Out)'}
-        >
+        <button type="button" className="canvas-btn hud-square-btn" onClick={() => setZoom((z) => clampZoom(z * 0.8))} title={t('zoomOut')} aria-label={t('zoomOut')}>
           −
         </button>
-        <button
-          className="canvas-btn hud-square-btn reset-btn"
-          onClick={handleResetView}
-          title={lang === 'cs' ? 'Resetovat pohled senzoru' : 'Recalibrate Sensor View'}
-        >
+        <button type="button" className="canvas-btn hud-square-btn reset-btn" onClick={handleResetView} title={t('resetViewTitle')}>
           {t('recalibrateBtn')}
         </button>
       </div>
 
-      {/* Tactical HUD Target Tooltip on Hover */}
       {hoveredStar && (
-        <div
-          className="star-hover-tooltip hud-tooltip"
-          style={{
-            left: `${mousePos.x + 18}px`,
-            top: `${mousePos.y - 20}px`
-          }}
-        >
+        <div className="star-hover-tooltip hud-tooltip" style={{ left: `${tooltipLeft}px`, top: `${tooltipTop}px` }}>
           <div className="tooltip-header hud-tooltip-header">
-            <span
-              className="tooltip-dot"
-              style={{ backgroundColor: temperatureToRGB(hoveredStar.temp).css }}
-            />
-            <span className="hud-target-label">{t('targetAcquired')}</span>
-            <strong>{hoveredStar.name.toUpperCase()}</strong>
+            <span className="tooltip-dot" style={{ backgroundColor: temperatureToRGB(hoveredStar.temp).css }} />
+            <strong>{hoveredStar.name}</strong>
           </div>
           <div className="tooltip-details hud-tooltip-details">
             <div><span>{t('classLabel')}</span> {hoveredStar.spectralType}</div>
-            <div><span>{t('tempLabel')}</span> {hoveredStar.temp.toLocaleString()} K</div>
-            <div><span>{t('lumLabel')}</span> {hoveredStar.lum} L☉</div>
-            <div><span>{t('radiusLabel')}</span> {hoveredStar.radius} R☉</div>
+            <div><span>{t('tempLabel')}</span> {formatInt(hoveredStar.temp, lang)} K</div>
+            <div><span>{t('lumLabel')}</span> {formatSig(hoveredStar.lum, lang)} L☉</div>
+            <div><span>{t('radiusLabel')}</span> {formatSig(hoveredStar.radius, lang)} R☉</div>
             {hoveredStar.hasExoplanets && (
-              <div className="tooltip-planet-tag">
-                {t('tooltipExoplanets', { count: hoveredStar.exoplanetCount })}
-              </div>
+              <div className="tooltip-planet-tag">{t('tooltipExoplanets', { count: hoveredStar.exoplanetCount })}</div>
             )}
-            <div className="tooltip-action-hint">
-              {t('tooltipClickHint')}
-            </div>
+            <div className="tooltip-action-hint">{t('tooltipClickHint')}</div>
           </div>
         </div>
       )}
     </div>
   );
 }
-

@@ -1,226 +1,153 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Award, CheckCircle2, HelpCircle, RotateCcw, Sparkles, Target, Trophy, Compass, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
+import { HABITABLE_ZONE_PLANET_HOSTS } from '../simulation/planetaryData';
+import { formatSig, formatInt } from '../utils/format';
 
-export default function AcademySimulator({
-  selectedStar,
-  onSelectStar,
-  famousStars = []
-}) {
+const MISSIONS = [
+  {
+    id: 'solar_twin',
+    xp: 100,
+    hintStarId: 'sun',
+    // Same criteria as stated in the mission text
+    verify: (s) => s.temp >= 5400 && s.temp <= 6100 && s.lum >= 0.7 && s.lum <= 1.5
+      && (s.spectralType || '').startsWith('G') && s.luminosityClass === 'V'
+  },
+  {
+    id: 'habitable_hunter',
+    xp: 150,
+    hintStarId: 'trappist1',
+    verify: (s) => HABITABLE_ZONE_PLANET_HOSTS.has(s.id)
+  },
+  {
+    id: 'white_dwarf',
+    xp: 200,
+    hintStarId: 'sirius_b',
+    verify: (s) => s.luminosityClass === 'D' && s.radius < 0.03
+  }
+];
+
+export default function AcademySimulator({ selectedStar, onSelectStar, famousStars = [] }) {
   const { lang, t } = useLanguage();
-
-  // Active mission index: 0 = Mission 1, 1 = Mission 2, 2 = Mission 3
   const [activeTaskIdx, setActiveTaskIdx] = useState(0);
   const [completedTasks, setCompletedTasks] = useState([false, false, false]);
   const [showHint, setShowHint] = useState(false);
-  const [celebrationMsg, setCelebrationMsg] = useState(null);
+  const [celebration, setCelebration] = useState(null);
 
-  // Define the 3 Academy missions
-  const missions = useMemo(() => [
-    {
-      id: 'solar_twin',
-      title: lang === 'cs' ? 'Mise 1: Sluneční dvojče' : 'Mission 1: The Solar Twin',
-      targetDesc: lang === 'cs'
-        ? 'Vyhledejte a označte v diagramu žlutého trpaslíka hlavní posloupnosti s povrchovou teplotou 5 400 – 6 100 K a svítivostí 0,7 – 1,5 L☉.'
-        : 'Locate and select a Main Sequence yellow dwarf with surface temperature 5,400 – 6,100 K and luminosity 0.7 – 1.5 L☉.',
-      hint: lang === 'cs'
-        ? 'Nápověda: Prozkoumejte střední pás hlavní posloupnosti (třída G). Zkuste najít Slunce (Sol), Alfa Centauri A nebo 16 Cygni B.'
-        : 'Hint: Explore the central main-sequence band (class G). Look for Sun (Sol), Alpha Centauri A, or 16 Cygni B.',
-      xp: 100,
-      verify: (s) => {
-        if (!s) return false;
-        const isTemp = s.temp >= 5300 && s.temp <= 6200;
-        const isLum = s.lum >= 0.6 && s.lum <= 1.8;
-        const isClass = s.spectralType && (s.spectralType.startsWith('G') || s.spectralType.includes('G'));
-        return isTemp && isLum && isClass;
-      },
-      hintStarId: 'sun'
-    },
-    {
-      id: 'habitable_hunter',
-      title: lang === 'cs' ? 'Mise 2: Lovec obyvatelných světů' : 'Mission 2: Habitable World Hunter',
-      targetDesc: lang === 'cs'
-        ? 'Lokalizujte hvězdu, která hostí potvrzené exoplanety v kapalinové obyvatelné zóně (CHZ).'
-        : 'Locate an exoplanet host star harboring confirmed planets within its Circumstellar Habitable Zone (CHZ).',
-      hint: lang === 'cs'
-        ? 'Nápověda: Zapněte filtr exoplanet na levém panelu nebo vyhledejte TRAPPIST-1, Proxima Centauri, Kepler-186 či Gliese 667 C.'
-        : 'Hint: Enable the exoplanet filter on the left panel or search for TRAPPIST-1, Proxima Centauri, Kepler-186, or Gliese 667 C.',
-      xp: 150,
-      verify: (s) => {
-        if (!s) return false;
-        return Boolean(s.hasExoplanets && s.exoplanetCount > 0);
-      },
-      hintStarId: 'trappist1'
-    },
-    {
-      id: 'white_dwarf',
-      title: lang === 'cs' ? 'Mise 3: Hřbitov bílých trpaslíků' : 'Mission 3: White Dwarf Graveyard',
-      targetDesc: lang === 'cs'
-        ? 'Vyhledejte kompaktního degenerovaného bílého trpaslíka (třída D) o poloměru srovnatelném se Zemí (R < 0,03 R☉).'
-        : 'Locate a compact degenerate White Dwarf (class D) with Earth-comparable radius (R < 0.03 R☉).',
-      hint: lang === 'cs'
-        ? 'Nápověda: Podívejte se do levého spodního sektoru diagramu. Hvězdy jsou zde velmi horké, ale extrémně slabé (např. Sirius B nebo Procyon B).'
-        : 'Hint: Look in the bottom-left quadrant. Stars here are blazing hot but faint due to their tiny radius (e.g. Sirius B or Procyon B).',
-      xp: 200,
-      verify: (s) => {
-        if (!s) return false;
-        const isClassD = (s.spectralType && s.spectralType.startsWith('D')) || s.luminosityClass === 'D';
-        const isTiny = s.radius && s.radius < 0.04;
-        const isFaintHot = s.temp >= 7000 && s.lum <= 0.1;
-        return isClassD || (isTiny && isFaintHot);
-      },
-      hintStarId: 'sirius_b'
-    }
-  ], [lang]);
-
-  const currentMission = missions[activeTaskIdx];
+  const currentMission = MISSIONS[activeTaskIdx];
   const allComplete = completedTasks.every(Boolean);
-  const totalXp = completedTasks.reduce((acc, comp, i) => comp ? acc + missions[i].xp : acc, 0);
+  const totalXp = useMemo(() => completedTasks.reduce((acc, done, i) => (done ? acc + MISSIONS[i].xp : acc), 0), [completedTasks]);
 
-  // Verify target whenever user selects a star
+  // Check the selected star against the active mission whenever either changes
+  // (state adjusted during render, see https://react.dev/learn/you-might-not-need-an-effect)
+  const checkKey = selectedStar ? `${selectedStar.id}:${activeTaskIdx}` : null;
+  const [lastCheckKey, setLastCheckKey] = useState(null);
+  if (checkKey !== lastCheckKey) {
+    setLastCheckKey(checkKey);
+    if (selectedStar && !completedTasks[activeTaskIdx] && currentMission.verify(selectedStar)) {
+      setCompletedTasks((prev) => prev.map((done, i) => (i === activeTaskIdx ? true : done)));
+      setCelebration({ starName: selectedStar.name, xp: currentMission.xp });
+    }
+  }
+
+  // Move on to the next task shortly after completing one
+  const currentDone = completedTasks[activeTaskIdx];
   useEffect(() => {
-    if (!selectedStar || allComplete) return;
+    if (!currentDone || activeTaskIdx >= MISSIONS.length - 1) return undefined;
+    const timer = setTimeout(() => {
+      setActiveTaskIdx((i) => i + 1);
+      setShowHint(false);
+    }, 1400);
+    return () => clearTimeout(timer);
+  }, [currentDone, activeTaskIdx]);
 
-    if (currentMission && currentMission.verify(selectedStar)) {
-      if (!completedTasks[activeTaskIdx]) {
-        const timer = setTimeout(() => {
-          setCompletedTasks(prev => {
-            const next = [...prev];
-            next[activeTaskIdx] = true;
-            return next;
-          });
+  // Hide the toast after a few seconds
+  useEffect(() => {
+    if (!celebration) return undefined;
+    const timer = setTimeout(() => setCelebration(null), 3500);
+    return () => clearTimeout(timer);
+  }, [celebration]);
 
-          // Flash celebration
-          setCelebrationMsg({
-            title: lang === 'cs' ? 'Cíl úspěšně splněn!' : 'Objective Achieved!',
-            starName: selectedStar.name,
-            xp: currentMission.xp
-          });
-
-          // Advance to next mission after a brief moment
-          if (activeTaskIdx < missions.length - 1) {
-            setTimeout(() => {
-              setActiveTaskIdx(prev => prev + 1);
-              setShowHint(false);
-            }, 1400);
-          }
-        }, 20);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [selectedStar, activeTaskIdx, completedTasks, allComplete, currentMission, lang, missions]);
-
-  // Handle hint jump
   const handleJumpToHintStar = () => {
-    if (!currentMission || !famousStars.length) return;
-    const cleanHint = currentMission.hintStarId.toLowerCase().replace(/[-_ ]/g, '');
-    const target = famousStars.find(s => {
-      const cleanId = (s.id || '').toLowerCase().replace(/[-_ ]/g, '');
-      const cleanName = (s.name || '').toLowerCase().replace(/[-_ ]/g, '');
-      return cleanId === cleanHint || cleanName.includes(cleanHint);
-    });
-    if (target) {
-      onSelectStar(target);
-    }
+    const target = famousStars.find((s) => s.id === currentMission.hintStarId);
+    if (target) onSelectStar(target);
   };
 
   const handleResetProgress = () => {
     setCompletedTasks([false, false, false]);
     setActiveTaskIdx(0);
     setShowHint(false);
-    setCelebrationMsg(null);
+    setCelebration(null);
   };
 
   return (
-    <aside className="academy-drawer hud-card">
+    <section className="academy-drawer hud-card" aria-labelledby="academy-title">
       <div className="academy-header">
         <div className="academy-title-group">
-          <Trophy size={16} className="trophy-icon" />
-          <span className="academy-title">{t('academyTitle')}</span>
+          <Trophy size={16} className="trophy-icon" aria-hidden="true" />
+          <h3 id="academy-title" className="academy-title">{t('academyTitle')}</h3>
           <span className="academy-progress-tag">
-            {completedTasks.filter(Boolean).length} / {missions.length} {t('missionsCompleted')}
+            {completedTasks.filter(Boolean).length} / {MISSIONS.length} {t('missionsCompleted')}
           </span>
         </div>
-
         <div className="academy-xp-group">
-          <Sparkles size={13} className="xp-icon" />
+          <Sparkles size={13} className="xp-icon" aria-hidden="true" />
           <span className="academy-xp">{totalXp} XP</span>
-          <button
-            className="academy-reset-btn"
-            onClick={handleResetProgress}
-            title={lang === 'cs' ? 'Resetovat mise akademie' : 'Reset Academy Missions'}
-          >
-            <RotateCcw size={12} />
+          <button type="button" className="academy-reset-btn" onClick={handleResetProgress} title={t('resetMissions')} aria-label={t('resetMissions')}>
+            <RotateCcw size={12} aria-hidden="true" />
           </button>
         </div>
       </div>
 
-      {/* Task step navigator pills */}
-      <div className="mission-stepper">
-        {missions.map((m, idx) => {
-          const isDone = completedTasks[idx];
-          const isCurrent = idx === activeTaskIdx;
-          return (
-            <button
-              key={m.id}
-              className={`mission-step-pill ${isDone ? 'done' : ''} ${isCurrent ? 'active' : ''}`}
-              onClick={() => {
-                setActiveTaskIdx(idx);
-                setShowHint(false);
-              }}
-            >
-              {isDone ? <CheckCircle2 size={13} /> : <span>{idx + 1}</span>}
-              <span className="pill-name">{m.title.split(':')[0]}</span>
-            </button>
-          );
-        })}
+      <div className="mission-stepper" role="tablist">
+        {MISSIONS.map((m, idx) => (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={idx === activeTaskIdx}
+            key={m.id}
+            className={`mission-step-pill ${completedTasks[idx] ? 'done' : ''} ${idx === activeTaskIdx ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTaskIdx(idx);
+              setShowHint(false);
+            }}
+          >
+            {completedTasks[idx] ? <CheckCircle2 size={13} aria-hidden="true" /> : <span>{idx + 1}</span>}
+            <span className="pill-name">{t('missionLabel')} {idx + 1}</span>
+          </button>
+        ))}
       </div>
 
-      {/* Mission details & interactive target */}
       {!allComplete ? (
         <div className="mission-content">
           <div className="mission-body">
-            <h4>{currentMission.title}</h4>
-            <p className="mission-instruction">{currentMission.targetDesc}</p>
-
-            {/* Hint toggle and actions */}
+            <h4>{t(`mission_${currentMission.id}_title`)}</h4>
+            <p className="mission-instruction">{t(`mission_${currentMission.id}_desc`)}</p>
             <div className="mission-actions-row">
-              <button
-                className="mission-hint-btn"
-                onClick={() => setShowHint(h => !h)}
-              >
-                <HelpCircle size={13} />
-                <span>{showHint ? (lang === 'cs' ? 'Skrýt nápovědu' : 'Hide Hint') : (lang === 'cs' ? 'Zobrazit nápovědu' : 'Show Clue')}</span>
+              <button type="button" className="mission-hint-btn" onClick={() => setShowHint((h) => !h)} aria-expanded={showHint}>
+                <HelpCircle size={13} aria-hidden="true" />
+                <span>{showHint ? t('hideHint') : t('showHint')}</span>
               </button>
-
-              <button
-                className="mission-guide-jump-btn"
-                onClick={handleJumpToHintStar}
-                title={lang === 'cs' ? 'Označit vzorovou hvězdu v diagramu' : 'Select benchmark star in diagram'}
-              >
-                <Target size={13} />
-                <span>{lang === 'cs' ? 'Zaměřit vzor' : 'Target Example'}</span>
+              <button type="button" className="mission-guide-jump-btn" onClick={handleJumpToHintStar} title={t('targetExampleTitle')}>
+                <Target size={13} aria-hidden="true" />
+                <span>{t('targetExample')}</span>
               </button>
             </div>
-
             {showHint && (
               <div className="mission-hint-box">
-                <Compass size={13} className="hint-icon" />
-                <span>{currentMission.hint}</span>
+                <Compass size={13} className="hint-icon" aria-hidden="true" />
+                <span>{t(`mission_${currentMission.id}_hint`)}</span>
               </div>
             )}
           </div>
 
-          {/* Dynamic target inspection readout */}
-          <div className="mission-status-readout">
-            <span className="readout-label">{t('currentSelectedTarget')}:</span>
+          <div className="mission-status-readout" aria-live="polite">
+            <span className="readout-label">{t('currentSelectedTarget')}</span>
             {selectedStar ? (
               <div className="readout-star">
                 <strong>{selectedStar.name}</strong>
-                <span>({selectedStar.spectralType}, {selectedStar.temp.toLocaleString()} K, {selectedStar.lum} L☉)</span>
-                {completedTasks[activeTaskIdx] && (
-                  <span className="readout-success">✓ {t('criteriaMet')}</span>
-                )}
+                <span>({selectedStar.spectralType}, {formatInt(selectedStar.temp, lang)} K, {formatSig(selectedStar.lum, lang)} L☉)</span>
+                {completedTasks[activeTaskIdx] && <span className="readout-success">✓ {t('criteriaMet')}</span>}
               </div>
             ) : (
               <span className="readout-empty">{t('selectStarHint')}</span>
@@ -228,31 +155,25 @@ export default function AcademySimulator({
           </div>
         </div>
       ) : (
-        /* Grand Completion Banner */
         <div className="academy-completion-banner">
-          <Award size={36} className="cert-trophy" />
+          <Award size={36} className="cert-trophy" aria-hidden="true" />
           <div className="cert-text">
-            <h3>{lang === 'cs' ? 'Akademie úspěšně dokončena!' : 'Academy Curriculum Completed!'}</h3>
-            <p>
-              {lang === 'cs'
-                ? 'Gratulujeme! Úspěšně jste zvládli astrofyzikální identifikaci žlutých trpaslíků, obyvatelných zón i bílých trpaslíků.'
-                : 'Congratulations! You have mastered the astrophysical identification of solar twins, habitable exoplanet hosts, and white dwarfs.'}
-            </p>
+            <h3>{t('academyCompleteTitle')}</h3>
+            <p>{t('academyCompleteText')}</p>
             <span className="cert-badge">
-              <ShieldCheck size={14} />
-              {lang === 'cs' ? 'Certifikovaný astrometrický navigátor' : 'Certified Astrometric Navigator'}
+              <ShieldCheck size={14} aria-hidden="true" />
+              {t('academyCertificate')}
             </span>
           </div>
         </div>
       )}
 
-      {/* Brief celebration toast */}
-      {celebrationMsg && (
-        <div className="academy-toast">
-          <Sparkles size={14} />
-          <span>{celebrationMsg.title} {celebrationMsg.starName} (+{celebrationMsg.xp} XP)</span>
+      {celebration && (
+        <div className="academy-toast" role="status">
+          <Sparkles size={14} aria-hidden="true" />
+          <span>{t('missionAccomplished', { name: celebration.starName, xp: celebration.xp })}</span>
         </div>
       )}
-    </aside>
+    </section>
   );
 }

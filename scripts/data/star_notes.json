@@ -1,0 +1,86 @@
+{
+  "7513": {
+    "en": "First multi-planet system discovered around a main-sequence star (1999): three giant planets orbit Titawin (Upsilon Andromedae A).",
+    "cs": "První soustava více planet objevená u hvězdy hlavní posloupnosti (1999): kolem Titawinu (ypsilon Andromedy A) obíhají tři obří planety."
+  },
+  "9640": {
+    "spect": "K3IIb",
+    "specNote": "Gamma1 Andromedae; HYG lists the B8V companion"
+  },
+  "10826": {
+    "spect": "M7IIIe",
+    "specNote": "Mira variable; HYG type has no luminosity class"
+  },
+  "15510": {
+    "en": "Nearby G-type star with several low-mass planets found by precision radial-velocity measurements (HARPS, ESPRESSO).",
+    "cs": "Blízká hvězda typu G s několika planetami nízké hmotnosti nalezenými přesným měřením radiálních rychlostí (HARPS, ESPRESSO)."
+  },
+  "16537": {
+    "en": "One of the nearest Sun-like stars (10.5 ly): a young, active K dwarf with a debris disc and the giant planet Ægir (Epsilon Eridani b).",
+    "cs": "Jedna z nejbližších hvězd podobných Slunci (10,5 sv. let): mladý aktivní trpaslík typu K s diskem úlomků a obří planetou Ægir (epsilon Eridani b)."
+  },
+  "24608": {
+    "spect": "K0III + G1III",
+    "specNote": "HYG lists M1; components from Torres et al. 2015, ApJ 807, 26"
+  },
+  "26207": {
+    "spect": "O8III",
+    "specNote": "Lambda Orionis A; HYG lists O..."
+  },
+  "36208": {
+    "spect": "M3.5V",
+    "specNote": "Luyten's Star; HYG lists M5"
+  },
+  "43587": {
+    "en": "Binary system whose primary hosts five known planets, including Janssen (55 Cnc e), an ultra-short-period super-Earth probably covered by a magma ocean.",
+    "cs": "Dvojhvězda, jejíž hlavní složka hostí pět známých planet, mezi nimi Janssen (55 Cnc e), superzemi s velmi krátkou oběžnou dobou, pravděpodobně pokrytou magmatickým oceánem."
+  },
+  "53721": {
+    "en": "47 UMa b (Taphao Thong, 1996) was one of the first exoplanets found around a Sun-like star; the system has three known giant planets.",
+    "cs": "47 UMa b (Taphao Thong, 1996) byla jedna z prvních exoplanet nalezených u hvězdy podobné Slunci; soustava má tři známé obří planety."
+  },
+  "54061": {
+    "spect": "K0III",
+    "specNote": "HYG lists the F7V companion"
+  },
+  "57548": {
+    "en": "Quiet red dwarf hosting the temperate planet Ross 128 b (minimum mass ≈ 1.4 Earth masses).",
+    "cs": "Klidný červený trpaslík s mírnou planetou Ross 128 b (minimální hmotnost ≈ 1,4 Země)."
+  },
+  "72339": {
+    "spect": "K0V",
+    "specNote": "HD 130322; HYG lists K0III"
+  },
+  "80838": {
+    "en": "Its hot Saturn Smertrios (HD 149026 b) is unusually dense, implying a large core of heavy elements.",
+    "cs": "Jeho horký Saturn Smertrios (HD 149026 b) má neobvykle vysokou hustotu, což ukazuje na velké jádro z těžkých prvků."
+  },
+  "84405": {
+    "spect": "K2V",
+    "specNote": "36 Ophiuchi A; HYG lists K2:III:"
+  },
+  "86796": {
+    "en": "Its four planets are named after characters from Don Quixote (Quijote, Dulcinea, Rocinante, Sancho).",
+    "cs": "Jeho čtyři planety nesou jména postav z Dona Quijota (Quijote, Dulcinea, Rocinante, Sancho)."
+  },
+  "92420": {
+    "spect": "B7II",
+    "specNote": "Beta Lyrae A (eclipsing binary, combined light)"
+  },
+  "104780": {
+    "spect": "K2V",
+    "specNote": "BD+14 4559; HYG lists K5 without class"
+  },
+  "113357": {
+    "en": "Dimidium (51 Peg b) was the first exoplanet found around a Sun-like star (Mayor & Queloz 1995; Nobel Prize 2019).",
+    "cs": "Dimidium (51 Peg b) byla první exoplaneta nalezená u hvězdy podobné Slunci (Mayor a Queloz 1995; Nobelova cena 2019)."
+  },
+  "113368": {
+    "en": "Encircled by a sharp debris ring imaged by Hubble; the former planet candidate Fomalhaut b is now thought to be an expanding dust cloud.",
+    "cs": "Obklopuje ji ostrý prstenec úlomků zobrazený Hubbleovým dalekohledem; dřívější kandidát na planetu Fomalhaut b je dnes považován za rozpínající se prachový oblak."
+  },
+  "116727": {
+    "en": "Tadmor (Gamma Cephei b) was among the first exoplanet candidates reported (Campbell, Walker & Yang 1988) and was confirmed in 2003.",
+    "cs": "Tadmor (gama Cephei b) patřil k prvním ohlášeným kandidátům na exoplanetu (Campbell, Walker a Yang 1988) a byl potvrzen v roce 2003."
+  }
+}

@@ -5,14 +5,25 @@
   "license": "Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)",
   "originalSourceUrl": "https://github.com/astronexus/HYG-Database",
   "codebergUrl": "https://codeberg.org/astronexus/hyg",
-  "citation": "Nash, D. (2019). The HYG Database, version 3.8. astronexus.com.",
+  "citation": "Nash, D. HYG Stellar Database, version 3.8. Astronexus (github.com/astronexus/HYG-Database).",
   "constituentCatalogs": [
     {
-      "name": "Hipparcos and Tycho Catalogues",
+      "name": "The Hipparcos and Tycho Catalogues",
+      "authors": "Perryman, M. A. C. et al.",
       "organization": "European Space Agency (ESA)",
       "year": 1997,
       "bibcode": "1997A&A...323L..49P",
-      "description": "Primary astrometric data, precise parallaxes, and high-accuracy visual magnitudes."
+      "description": "Visual magnitudes, B−V colours and the original Hipparcos astrometry included in HYG.",
+      "descriptionCs": "Vizuální hvězdné velikosti, barevné indexy B−V a původní astrometrie Hipparcos obsažené v HYG."
+    },
+    {
+      "name": "Hipparcos, the New Reduction of the Raw Data",
+      "authors": "van Leeuwen, F.",
+      "organization": "VizieR catalogue I/311",
+      "year": 2007,
+      "bibcode": "2007A&A...474..653V",
+      "description": "Parallaxes and parallax errors; only stars with relative parallax error below 10 % are plotted as the background population.",
+      "descriptionCs": "Paralaxy a jejich chyby; jako hvězdné pozadí jsou vykresleny jen hvězdy s relativní chybou paralaxy pod 10 %."
     },
     {
       "name": "The Bright Star Catalogue, 5th Revised Ed.",
@@ -20,31 +31,81 @@
       "organization": "Yale University Observatory",
       "year": 1991,
       "bibcode": "1991bsc..book.....H",
-      "description": "Harvard Revised (HR) designations, spectral types, and historical designations."
+      "description": "Harvard Revised (HR) designations and spectral types included in HYG.",
+      "descriptionCs": "Označení Harvard Revised (HR) a spektrální typy obsažené v HYG."
     },
     {
-      "name": "Third Catalogue of Nearby Stars (CNS3)",
+      "name": "Preliminary Version of the Third Catalogue of Nearby Stars (CNS3)",
       "authors": "Gliese, W. and Jahreiß, H.",
       "organization": "Astronomisches Rechen-Institut Heidelberg",
       "year": 1991,
-      "bibcode": "1991cns3.rep.....G",
-      "description": "Stellar parameters for stars within 25 parsecs of the Sun."
+      "bibcode": "1991adc..rept.....G",
+      "description": "Stars within about 25 parsecs of the Sun included in HYG.",
+      "descriptionCs": "Hvězdy do vzdálenosti asi 25 parseků od Slunce obsažené v HYG."
     },
     {
       "name": "NASA Exoplanet Archive",
-      "organization": "NASA / Caltech-IPAC",
+      "authors": "Akeson, R. L. et al.",
+      "organization": "NASA / Caltech-IPAC (NExScI)",
+      "year": 2013,
+      "bibcode": "2013PASP..125..989A",
       "url": "https://exoplanetarchive.ipac.caltech.edu/",
-      "description": "Confirmed exoplanet host counts, discovery dates, and planetary system properties."
+      "description": "Numbers of confirmed planets per host star (table of composite planet parameters).",
+      "descriptionCs": "Počty potvrzených planet u jednotlivých hvězd (tabulka složených parametrů planet)."
     },
     {
-      "name": "Habitable Zones Around Main-Sequence Stars",
-      "authors": "Kopparapu, R. K., Ramirez, R., Kasting, J. F., et al.",
-      "organization": "Penn State University / NASA Astrobiology Institute",
+      "name": "Bolometric corrections and Teff–colour relations",
+      "authors": "Flower, P. J. (1996); Torres, G. (2010)",
+      "organization": "ApJ 469, 355; AJ 140, 1158",
+      "year": 2010,
+      "bibcode": "2010AJ....140.1158T",
+      "description": "Effective temperatures of giants and supergiants from B−V and bolometric corrections BCV for converting MV to luminosity.",
+      "descriptionCs": "Efektivní teploty obrů a veleobrů z B−V a bolometrické korekce BCV pro převod MV na zářivý výkon."
+    },
+    {
+      "name": "Intrinsic colours and temperatures of dwarf stars",
+      "authors": "Pecaut, M. J. and Mamajek, E. E.",
+      "organization": "ApJS 208, 9 (table version 2022.04.16)",
       "year": 2013,
-      "bibcode": "2013ApJ...765..131K",
-      "url": "https://arxiv.org/abs/1301.6674",
-      "description": "Atmospheric climate model calculating circumstellar habitable zone limits (runaway greenhouse and maximum greenhouse solar fluxes)."
+      "bibcode": "2013ApJS..208....9P",
+      "url": "https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt",
+      "description": "Teff, BCV and MV of main-sequence stars by spectral type; also used for O/B stars and M dwarfs.",
+      "descriptionCs": "Teff, BCV a MV hvězd hlavní posloupnosti podle spektrálního typu; použito i pro hvězdy O/B a červené trpaslíky."
+    },
+    {
+      "name": "Habitable Zones around Main-Sequence Stars",
+      "authors": "Kopparapu, R. K. et al.",
+      "organization": "ApJ 765, 131 (2013); ApJL 787, L29 (2014)",
+      "year": 2014,
+      "bibcode": "2014ApJ...787L..29K",
+      "url": "https://arxiv.org/abs/1404.5292",
+      "description": "Effective stellar fluxes for the recent-Venus, runaway-greenhouse, maximum-greenhouse and early-Mars limits (valid for 2,600 K ≤ Teff ≤ 7,200 K).",
+      "descriptionCs": "Efektivní toky záření pro meze „nedávná Venuše“, překotný skleníkový efekt, maximální skleníkový efekt a „raný Mars“ (platí pro 2 600 K ≤ Teff ≤ 7 200 K)."
+    },
+    {
+      "name": "Gaia Data Release 2: Observational Hertzsprung–Russell diagrams",
+      "authors": "Gaia Collaboration, Babusiaux, C. et al.",
+      "organization": "A&A 616, A10",
+      "year": 2018,
+      "bibcode": "2018A&A...616A..10G",
+      "description": "Cluster parallaxes and proper motions used to select Pleiades and Hyades members; fine structure of the Gaia H–R diagram.",
+      "descriptionCs": "Paralaxy a vlastní pohyby hvězdokup použité k výběru členů Plejád a Hyád; jemná struktura H–R diagramu z Gaia."
+    },
+    {
+      "name": "Gaia fine structure: the Jao gap and white-dwarf crystallisation",
+      "authors": "Jao, W.-C. et al. (2018); Tremblay, P.-E. et al. (2019)",
+      "organization": "ApJL 861, L11; Nature 565, 202",
+      "year": 2019,
+      "bibcode": "2019Natur.565..202T",
+      "description": "Gap in the lower main sequence near the onset of full convection, and the pile-up of crystallising white dwarfs.",
+      "descriptionCs": "Mezera na spodní hlavní posloupnosti u přechodu k plně konvektivním hvězdám a nahromadění krystalizujících bílých trpaslíků."
     }
   ],
-  "lastUpdated": "2026-10-15T15:45:00.000Z"
+  "lastUpdated": "2026-10-15",
+  "processing": {
+    "backgroundStars": 7475,
+    "namedStars": 407,
+    "curatedStars": 58,
+    "parallaxQualityCut": "σϖ/ϖ < 10 % (named stars < 20 %)"
+  }
 }

@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Downloaded source catalogues (scripts/buildStellarData.mjs)
+scripts/.cache

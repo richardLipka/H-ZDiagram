@@ -2,20 +2,22 @@ import React from 'react';
 import { Telescope, Orbit, Clock, Layers, BookOpen, Database, Globe, GraduationCap } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 
-export default function Header({
-  activeMode,
-  setActiveMode,
-  onOpenGuide,
-  onOpenAttribution
-}) {
-  const { lang, toggleLang, t } = useLanguage();
+const MODES = [
+  { id: 'explore', icon: Telescope, label: 'navExplore', title: 'navExploreTitle' },
+  { id: 'evolution', icon: Orbit, label: 'navEvolution', title: 'navEvolutionTitle' },
+  { id: 'cluster', icon: Clock, label: 'navClusters', title: 'navClustersTitle' },
+  { id: 'academy', icon: GraduationCap, label: 'navAcademy', title: 'navAcademyTitle' },
+  { id: 'compare', icon: Layers, label: 'navCompare', title: 'navCompareTitle' }
+];
+
+export default function Header({ activeMode, setActiveMode, onOpenGuide, onOpenAttribution }) {
+  const { toggleLang, t } = useLanguage();
 
   return (
     <header className="app-header hud-header">
-      {/* Brand Title */}
       <div className="header-brand">
         <div className="brand-reticle">
-          <img src="./favicon.svg" alt="H-R Diagram Logo" className="brand-logo-img" width="26" height="26" />
+          <img src="./favicon.svg" alt="" className="brand-logo-img" width="26" height="26" />
         </div>
         <div className="brand-text">
           <h1>{t('appTitle')}</h1>
@@ -23,78 +25,33 @@ export default function Header({
         </div>
       </div>
 
-      {/* Mode Navigation */}
-      <nav className="header-nav hud-nav">
-        <button
-          className={`nav-btn hud-btn ${activeMode === 'explore' ? 'active' : ''}`}
-          onClick={() => setActiveMode('explore')}
-          title={lang === 'cs' ? 'Prohlížet hvězdy v diagramu' : 'Explore stars in diagram'}
-        >
-          <Telescope size={15} />
-          <span>{t('navExplore')}</span>
-        </button>
+      <nav className="header-nav hud-nav" aria-label={t('navLabel')}>
+        {MODES.map(({ id, icon: Icon, label, title }) => (
+          <button
+            type="button"
+            key={id}
+            className={`nav-btn hud-btn ${activeMode === id ? 'active' : ''}`}
+            aria-pressed={activeMode === id}
+            onClick={() => setActiveMode(id)}
+            title={t(title)}
+          >
+            <Icon size={15} aria-hidden="true" />
+            <span>{t(label)}</span>
+          </button>
+        ))}
 
-        <button
-          className={`nav-btn hud-btn ${activeMode === 'evolution' ? 'active' : ''}`}
-          onClick={() => setActiveMode('evolution')}
-          title={lang === 'cs' ? 'Simulace vývoje hvězd' : 'Stellar Evolution Tracks'}
-        >
-          <Orbit size={15} />
-          <span>{t('navEvolution')}</span>
-        </button>
-
-        <button
-          className={`nav-btn hud-btn ${activeMode === 'cluster' ? 'active' : ''}`}
-          onClick={() => setActiveMode('cluster')}
-          title={lang === 'cs' ? 'Datování hvězdokup a izochrony' : 'Cluster Dating & Isochrones'}
-        >
-          <Clock size={15} />
-          <span>{t('navClusters')}</span>
-        </button>
-
-        <button
-          className={`nav-btn hud-btn ${activeMode === 'academy' ? 'active' : ''}`}
-          onClick={() => setActiveMode('academy')}
-          title={lang === 'cs' ? 'Astrometrická akademie: Výukové mise a úkoly' : 'Astrometrics Academy: Interactive Challenges'}
-        >
-          <GraduationCap size={15} />
-          <span>{t('navAcademy')}</span>
-        </button>
-
-        <button
-          className={`nav-btn hud-btn ${activeMode === 'compare' ? 'active' : ''}`}
-          onClick={() => setActiveMode('compare')}
-          title={lang === 'cs' ? 'Srovnávač parametrů hvězd' : 'Compare Stellar Parameters'}
-        >
-          <Layers size={15} />
-          <span>{t('navCompare')}</span>
-        </button>
-
-        <button
-          className="nav-btn hud-btn guide-btn"
-          onClick={onOpenGuide}
-          title={lang === 'cs' ? 'Otevřít astrofyzikální návod' : 'Open Educational Guide'}
-        >
-          <BookOpen size={15} />
+        <button type="button" className="nav-btn hud-btn guide-btn" onClick={onOpenGuide} title={t('navManualTitle')}>
+          <BookOpen size={15} aria-hidden="true" />
           <span>{t('navManual')}</span>
         </button>
 
-        <button
-          className="nav-btn hud-btn data-btn"
-          onClick={onOpenAttribution}
-          title={lang === 'cs' ? 'Zdroje dat a katalogů' : 'View Data Sources & Attribution'}
-        >
-          <Database size={15} />
+        <button type="button" className="nav-btn hud-btn data-btn" onClick={onOpenAttribution} title={t('navDataFeedTitle')}>
+          <Database size={15} aria-hidden="true" />
           <span>{t('navDataFeed')}</span>
         </button>
 
-        {/* Bilingual Language Switcher */}
-        <button
-          className="nav-btn hud-btn lang-toggle-btn"
-          onClick={toggleLang}
-          title={t('navLangTitle')}
-        >
-          <Globe size={14} />
+        <button type="button" className="nav-btn hud-btn lang-toggle-btn" onClick={toggleLang} title={t('navLangTitle')} lang={t('navLangCode')}>
+          <Globe size={14} aria-hidden="true" />
           <span>{t('navLangToggle')}</span>
         </button>
       </nav>

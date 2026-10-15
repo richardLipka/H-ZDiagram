@@ -35,8 +35,8 @@ export function LanguageProvider({ children }) {
   useEffect(() => {
     document.documentElement.lang = lang;
     const title = lang === 'cs'
-      ? 'H–R diagram | Interaktivní astrofyzikální simulátor'
-      : 'H-R Diagram Explorer | Interactive Astrophysics Simulator';
+      ? 'H–R diagram | Interaktivní Hertzsprungův–Russellův diagram'
+      : 'H–R Diagram Studio | Interactive Hertzsprung–Russell diagram';
     document.title = title;
   }, [lang]);
 

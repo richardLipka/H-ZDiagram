@@ -1,151 +1,128 @@
 /**
- * SIMBAD Astronomical Database & CDS Aladin/HiPS Service
- * Resolves celestial coordinates and retrieves astronomical telemetry and imagery from CDS Strasbourg.
+ * CDS Sesame name resolver (SIMBAD) and hips2fits sky cutouts.
+ * https://cds.unistra.fr/cgi-bin/Sesame — https://alasky.cds.unistra.fr/hips-image-services/hips2fits
  */
 
-// In-memory cache to prevent redundant queries
 const simbadCache = new Map();
 
+// The Sun has no sky position; show a full-disc solar image instead
+const SUN_DATA = {
+  available: true,
+  ra: null,
+  dec: null,
+  objectType: null,
+  parallax: null,
+  radVel: null,
+  imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg/600px-The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg',
+  isSolarSpecial: true
+};
+
+function sesameQuery(star) {
+  if (star.hip) return `HIP ${star.hip}`;
+  const name = (star.name || '').replace(/\s*\(.*?\)\s*/g, ' ').trim();
+  return name || star.bayer || '';
+}
+
 /**
- * Query CDS Sesame resolver for SIMBAD astronomical records.
- * @param {Object} star - Star object from catalog
- * @returns {Promise<Object>} Astronomical data including coordinates and HiPS image cutout URL
+ * Resolve a star with Sesame and return its position, SIMBAD object type,
+ * parallax, radial velocity and a DSS2 colour cutout URL.
  */
 export async function fetchSimbadData(star) {
   if (!star) return { available: false };
+  if (star.id === 'sun') return SUN_DATA;
 
-  // Check cache first
-  const cacheKey = (star.hip ? `hip_${star.hip}` : star.name).toLowerCase();
-  if (simbadCache.has(cacheKey)) {
-    return simbadCache.get(cacheKey);
-  }
-
-  // Sol / Sun special handling: Solar Dynamics Observatory visible light image
-  if (star.id === 'sun' || star.name.toLowerCase() === 'sol' || star.name.toLowerCase() === 'sun (sol)') {
-    const sunData = {
-      available: true,
-      ra: null,
-      dec: null,
-      spectralType: 'G2V',
-      objectType: 'Yellow Dwarf (Home Star)',
-      objectTypeCs: 'Žlutý trpaslík (Naše hvězda)',
-      parallax: null,
-      radVel: '0.0',
-      properMotion: null,
-      vMag: '-26.74',
-      simbadName: 'Sun (Sol)',
-      imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg/600px-The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg',
-      isSolarSpecial: true
-    };
-    simbadCache.set(cacheKey, sunData);
-    return sunData;
-  }
-
-  // Construct query: prioritize HIP number, then Bayer designation, then canonical name
-  let query = '';
-  if (star.hip) {
-    query = `HIP ${star.hip}`;
-  } else if (star.bayer) {
-    query = star.bayer;
-  } else {
-    query = star.name.replace(/\s*\(.*?\)\s*/g, '').trim();
-  }
+  const query = sesameQuery(star);
+  const cacheKey = query.toLowerCase();
+  if (simbadCache.has(cacheKey)) return simbadCache.get(cacheKey);
 
   try {
-    const sesameUrl = `https://cdsweb.u-strasbg.fr/cgi-bin/nph-sesame/-oI/A?${encodeURIComponent(query)}`;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4500);
-
-    const res = await fetch(sesameUrl, { signal: controller.signal });
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const res = await fetch(`https://cds.unistra.fr/cgi-bin/nph-sesame/-oI/A?${encodeURIComponent(query)}`, { signal: controller.signal });
     clearTimeout(timeoutId);
-
-    if (!res.ok) {
-      const fallback = { available: false, query };
-      simbadCache.set(cacheKey, fallback);
-      return fallback;
-    }
+    if (!res.ok) return remember(cacheKey, { available: false, query });
 
     const text = await res.text();
-
-    // Parse Sesame text output
-    // %J: J2000 Coordinates: RA(deg) Dec(deg)
     const jMatch = text.match(/%J\s+([+\-\d.]+)\s+([+\-\d.]+)/);
-    // %S: SIMBAD Spectral Type
-    const sMatch = text.match(/%S\s+([^\n\r=]+)/);
-    // %C.0 or %C: SIMBAD Object Type
+    if (!jMatch) return remember(cacheKey, { available: false, query });
     const cMatch = text.match(/%C(?:\.0)?\s+([^\n\r]+)/);
-    // %X: Parallax (mas)
     const xMatch = text.match(/%X\s+([+\-\d.]+)/);
-    // %V: Radial Velocity (km/s)
     const vMatch = text.match(/%V\s+[a-z]?\s*([+\-\d.]+)/);
-    // %P: Proper Motion (mas/yr)
-    const pMatch = text.match(/%P\s+([+\-\d.]+)\s+([+\-\d.]+)/);
-    // %M.V: Visual Magnitude
-    const mvMatch = text.match(/%M\.V\s+([+\-\d.]+)/);
-    // %I.0 or %I: Canonical Identifier
-    const iMatch = text.match(/%I(?:\.0)?\s+([^\n\r]+)/);
-
-    if (!jMatch) {
-      const fallback = { available: false, query };
-      simbadCache.set(cacheKey, fallback);
-      return fallback;
-    }
 
     const ra = parseFloat(jMatch[1]);
     const dec = parseFloat(jMatch[2]);
-
-    // CDS Aladin HiPS2FITS cutout endpoint with wide field-of-view (0.28 deg) capturing surroundings
-    const imageUrl = `https://alasky.cds.unistra.fr/hips-image-services/hips2fits?hips=CDS/P/DSS2/color&width=240&height=240&fov=0.28&ra=${ra}&dec=${dec}&format=jpg`;
-
-    const simbadData = {
+    return remember(cacheKey, {
       available: true,
       query,
       ra,
       dec,
-      spectralType: sMatch ? sMatch[1].trim() : star.spectralType,
-      objectType: cMatch ? formatSimbadObjectType(cMatch[1].trim()) : 'Star',
+      objectType: cMatch ? cMatch[1].trim() : null,
       parallax: xMatch ? parseFloat(xMatch[1]) : null,
       radVel: vMatch ? parseFloat(vMatch[1]) : null,
-      properMotion: pMatch ? `${parseFloat(pMatch[1]).toFixed(1)}, ${parseFloat(pMatch[2]).toFixed(1)} mas/yr` : null,
-      vMag: mvMatch ? parseFloat(mvMatch[1]) : null,
-      simbadName: iMatch ? iMatch[1].trim() : query,
-      imageUrl
-    };
-
-    simbadCache.set(cacheKey, simbadData);
-    return simbadData;
+      // DSS2 colour cutout, 0.28° field of view
+      imageUrl: `https://alasky.cds.unistra.fr/hips-image-services/hips2fits?hips=CDS/P/DSS2/color&width=240&height=240&fov=0.28&ra=${ra}&dec=${dec}&format=jpg`
+    });
   } catch (err) {
-    // Network error or timeout
-    const fallback = { available: false, query, error: err.message };
-    simbadCache.set(cacheKey, fallback);
-    return fallback;
+    // Network errors and timeouts are not cached so that a later retry can succeed
+    return { available: false, query, error: err.message };
   }
 }
 
-/**
- * Human-friendly labels for common SIMBAD astronomical object classification codes
- */
-function formatSimbadObjectType(code) {
-  const map = {
-    '*': 'Star',
-    '**': 'Double or Binary Star',
-    'SB*': 'Spectroscopic Binary Star',
-    'EB*': 'Eclipsing Binary Star',
-    'V*': 'Variable Star',
-    'PulsV*': 'Pulsating Variable Star',
-    'Cepheid': 'Classical Cepheid Variable',
-    's*r': 'Red Supergiant Star',
-    's*b': 'Blue Supergiant Star',
-    's*y': 'Yellow Supergiant Star',
-    'AB*': 'Asymptotic Giant Branch (AGB)',
-    'WD*': 'White Dwarf Remnant',
-    'LM*': 'Low-Mass M-Dwarf Star',
-    'BD*': 'Brown Dwarf Sub-Stellar Object',
-    'HXB': 'High-Mass X-Ray Binary (BH/NS)',
-    'LXB': 'Low-Mass X-Ray Binary',
-    'X': 'High-Energy X-Ray Source',
-    'Pulsar': 'Neutron Star Pulsar',
-    'SNRemnant': 'Supernova Remnant'
-  };
-  return map[code] || code;
+function remember(key, value) {
+  simbadCache.set(key, value);
+  return value;
+}
+
+// SIMBAD object-type codes (https://simbad.cds.unistra.fr/guide/otypes.htx)
+const OBJECT_TYPES = {
+  '*': ['Star', 'Hvězda'],
+  '**': ['Double or multiple star', 'Dvojhvězda nebo vícenásobná hvězda'],
+  'SB*': ['Spectroscopic binary', 'Spektroskopická dvojhvězda'],
+  'EB*': ['Eclipsing binary', 'Zákrytová dvojhvězda'],
+  'V*': ['Variable star', 'Proměnná hvězda'],
+  'Pu*': ['Pulsating variable', 'Pulzující proměnná hvězda'],
+  'Ce*': ['Classical Cepheid', 'Klasická cefeida'],
+  'cC*': ['Classical Cepheid', 'Klasická cefeida'],
+  'RR*': ['RR Lyrae variable', 'Proměnná typu RR Lyrae'],
+  'Mi*': ['Mira variable', 'Proměnná typu Mira'],
+  'sr*': ['Semiregular variable', 'Polopravidelná proměnná'],
+  'RG*': ['Red giant branch star', 'Hvězda větve červených obrů'],
+  'AB*': ['Asymptotic giant branch star', 'Hvězda asymptotické větve obrů'],
+  's*r': ['Red supergiant', 'Červený veleobr'],
+  's*b': ['Blue supergiant', 'Modrý veleobr'],
+  's*y': ['Yellow supergiant', 'Žlutý veleobr'],
+  'WD*': ['White dwarf', 'Bílý trpaslík'],
+  'LM*': ['Low-mass star', 'Hvězda nízké hmotnosti'],
+  'BD*': ['Brown dwarf', 'Hnědý trpaslík'],
+  'BY*': ['BY Draconis variable', 'Proměnná typu BY Draconis'],
+  'Er*': ['Eruptive variable', 'Eruptivní proměnná'],
+  'Fl*': ['Flare star', 'Erupční hvězda'],
+  'HXB': ['High-mass X-ray binary', 'Rentgenová dvojhvězda s hmotnou složkou'],
+  'LXB': ['Low-mass X-ray binary', 'Rentgenová dvojhvězda s málo hmotnou složkou'],
+  'Psr': ['Pulsar', 'Pulzar'],
+  'N*': ['Neutron star', 'Neutronová hvězda'],
+  'X': ['X-ray source', 'Rentgenový zdroj'],
+  'PM*': ['High proper-motion star', 'Hvězda s velkým vlastním pohybem'],
+  'Em*': ['Emission-line star', 'Hvězda s emisními čarami'],
+  'Be*': ['Be star', 'Hvězda Be'],
+  'a2*': ['α² CVn variable', 'Proměnná typu α² CVn'],
+  'dS*': ['δ Scuti variable', 'Proměnná typu δ Scuti'],
+  'bC*': ['β Cephei variable', 'Proměnná typu β Cephei'],
+  'Or*': ['Young stellar object (Orion variable)', 'Mladá hvězda (proměnná typu Orion)'],
+  'TT*': ['T Tauri star', 'Hvězda typu T Tauri'],
+  'LP*': ['Long-period variable', 'Dlouhoperiodická proměnná'],
+  'C*': ['Carbon star', 'Uhlíková hvězda'],
+  'WR*': ['Wolf–Rayet star', 'Wolfova–Rayetova hvězda'],
+  'LB*': ['Luminous blue variable', 'Svítivá modrá proměnná'],
+  'El*': ['Ellipsoidal variable', 'Elipsoidální proměnná'],
+  'RS*': ['RS Canum Venaticorum variable', 'Proměnná typu RS CVn'],
+  'Ro*': ['Rotating variable', 'Rotující proměnná'],
+  'Pl': ['Planet', 'Planeta']
+};
+
+/** Human-readable SIMBAD object type in the requested language. */
+export function simbadTypeLabel(code, lang = 'en') {
+  if (!code) return null;
+  const entry = OBJECT_TYPES[code];
+  return entry ? entry[lang === 'cs' ? 1 : 0] : code;
 }
