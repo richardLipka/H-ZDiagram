@@ -636,13 +636,16 @@
 
 /* Right Panel: Star Inspector */
 .star-inspector-panel {
-  width: 340px;
+  width: 360px;
+  max-width: 100%;
+  box-sizing: border-box;
   border-left: 1px solid var(--hud-border-dim);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overflow-x: hidden;
   z-index: 20;
-  padding: 18px;
+  padding: 16px;
   gap: 14px;
 }
 
@@ -1509,6 +1512,13 @@
   text-align: center;
 }
 
+.chz-visualizer-card {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
 .chz-radar-viewport {
   display: flex;
   justify-content: center;
@@ -1518,29 +1528,40 @@
   border-radius: var(--radius-hud-sm);
   padding: 6px;
   overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .chz-svg {
   width: 100%;
-  max-width: 320px;
+  max-width: 270px;
   height: auto;
   aspect-ratio: 1 / 1;
+  display: block;
 }
 
 .chz-telemetry-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 6px;
 }
 
 .chz-stat-box {
   display: flex;
   flex-direction: column;
-  padding: 5px 6px;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 3px;
   background: rgba(0, 15, 30, 0.55);
   border: 1px solid rgba(0, 240, 255, 0.15);
   border-radius: 3px;
   text-align: center;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .chz-stat-box.inner { border-top: 2px solid #ffaa00; }
@@ -1553,26 +1574,35 @@
   justify-content: center;
   gap: 3px;
   font-family: var(--font-mono);
-  font-size: 8.5px;
+  font-size: 8px;
   color: var(--text-telemetry);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .chz-stat-val {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: #ffffff;
   margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .chz-stat-sub {
   font-family: var(--font-mono);
-  font-size: 7.5px;
+  font-size: 7px;
   color: rgba(255, 255, 255, 0.5);
   margin-top: 1px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .chz-status-banner {
@@ -1581,9 +1611,12 @@
   border-radius: 3px;
   padding: 5px 8px;
   font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: 9px;
   line-height: 1.35;
   color: var(--text-ice-white);
+  box-sizing: border-box;
+  overflow: hidden;
+  width: 100%;
 }
 
 .chz-system-summary {
@@ -1634,9 +1667,376 @@
   padding: 10px;
 }
 
+/* ==========================================================================
+   SIMBAD Sensor Chamber & Sky Cutout
+   ========================================================================== */
+.chamber-mode-selector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+.chamber-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  background: rgba(0, 30, 60, 0.5);
+  border: 1px solid var(--hud-border-dim);
+  border-radius: var(--radius-hud-sm);
+  color: var(--text-telemetry);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.chamber-toggle-btn:hover:not(:disabled) {
+  background: rgba(0, 240, 255, 0.15);
+  color: #ffffff;
+  border-color: var(--holo-cyan);
+}
+
+.chamber-toggle-btn.active {
+  background: rgba(0, 240, 255, 0.2);
+  color: var(--holo-cyan);
+  border-color: var(--holo-cyan);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+}
+
+.chamber-toggle-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.simbad-sky-aperture {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  border-radius: 50% !important;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.35);
+  border: 2px solid var(--holo-cyan);
+}
+
+.simbad-sky-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50% !important;
+  display: block;
+}
+
+.simbad-optics-ring {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 14px rgba(0, 240, 255, 0.6);
+  pointer-events: none;
+}
+
+.chamber-loading-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 50%;
+  background: rgba(1, 6, 18, 0.75);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  z-index: 5;
+}
+
+.radar-sweep-spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid rgba(0, 240, 255, 0.2);
+  border-top-color: var(--holo-cyan);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.radar-loading-label {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  color: var(--holo-cyan);
+  letter-spacing: 0.05em;
+}
+
+.simbad-source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--holo-cyan);
+  background: rgba(0, 30, 60, 0.6);
+  border: 1px solid var(--hud-border-dim);
+  padding: 2px 8px;
+  border-radius: var(--radius-hud-sm);
+  text-align: center;
+}
+
+.simbad-telemetry-strip {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+  width: 100%;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(0, 240, 255, 0.2);
+}
+
+.simbad-tel-item {
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 20, 45, 0.5);
+  border: 1px solid rgba(0, 240, 255, 0.1);
+  border-radius: 3px;
+  padding: 4px 6px;
+}
+
+.simbad-tel-lbl {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-telemetry);
+  text-transform: uppercase;
+}
+
+.simbad-tel-val {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.simbad-tel-val.highlight {
+  color: var(--holo-cyan);
+}
+
+/* ==========================================================================
+   STRICT CIRCULAR RULES FOR SIZE COMPARISON
+   ========================================================================== */
+.star-photosphere {
+  border-radius: 50% !important;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.scale-sphere {
+  border-radius: 50% !important;
+  aspect-ratio: 1 / 1;
+  display: inline-block;
+  overflow: hidden;
+}
+
+.scale-sphere-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 190px;
+  width: 100%;
+}
+
+.sim-star-circle {
+  border-radius: 50% !important;
+  aspect-ratio: 1 / 1;
+  width: 76px;
+  height: 76px;
+  display: block;
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   INSTITUTIONAL & ACADEMIC FOOTER (KIV & RICHARD LIPKA)
+   ========================================================================== */
+.app-footer {
+  width: 100%;
+  background: rgba(1, 4, 12, 0.95);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--hud-border-dim);
+  z-index: 30;
+  box-sizing: border-box;
+}
+
+.footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.footer-col {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.affiliation-col {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.kiv-logo-link {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  transition: transform var(--transition-fast), filter var(--transition-fast), background var(--transition-fast);
+}
+
+.kiv-logo-link:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.15);
+  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.6));
+  border-color: var(--holo-cyan);
+}
+
+.kiv-logo-img {
+  height: 26px;
+  width: auto;
+  display: block;
+}
+
+.affiliation-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dept-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-hud);
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.03em;
+}
+
+.faculty-univ {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-telemetry);
+}
+
+.author-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.author-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.author-label {
+  color: var(--text-telemetry);
+}
+
+.author-name-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--holo-cyan);
+  text-decoration: none;
+  font-weight: 700;
+  transition: all var(--transition-fast);
+}
+
+.author-name-link:hover {
+  color: #ffffff;
+  text-shadow: 0 0 8px var(--holo-cyan);
+}
+
+.academic-mission {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.meta-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-link-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  background: rgba(0, 30, 60, 0.4);
+  border: 1px solid var(--hud-border-dim);
+  border-radius: var(--radius-hud-sm);
+  color: var(--text-telemetry);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.footer-link-pill:hover {
+  background: rgba(0, 240, 255, 0.15);
+  color: #ffffff;
+  border-color: var(--holo-cyan);
+}
+
+.build-tag {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  color: rgba(0, 240, 255, 0.6);
+  letter-spacing: 0.05em;
+}
+
 @media (max-width: 1024px) {
   .sim-card.chz-sim-card {
     grid-column: span 1;
+  }
+}
+
+@media (max-width: 900px) {
+  .footer-inner {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+  }
+  .affiliation-col, .meta-col, .author-col {
+    align-items: center;
   }
 }
 

@@ -77,15 +77,25 @@ export default function HabitableZoneVisualizer({
   const [zoomFactor, setZoomFactor] = useState(1.0);
   const [hoveredPlanet, setHoveredPlanet] = useState(null);
 
-  // SVG dimensions
-  const svgSize = 340;
+  // Helper to format AU values gracefully preventing layout breakage
+  const formatAU = (val) => {
+    if (val === undefined || val === null || isNaN(val)) return '—';
+    if (val >= 1000) return val.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    if (val >= 100) return val.toFixed(1);
+    if (val >= 10) return val.toFixed(2);
+    if (val >= 0.01) return val.toFixed(3);
+    return val.toExponential(2);
+  };
+
+  // SVG dimensions - responsive viewBox
+  const svgSize = 300;
   const center = svgSize / 2;
-  const maxRadiusPx = center - 24;
+  const maxRadiusPx = center - 20;
 
   // Scale function: AU -> Pixels
   const auToPx = (au) => {
     const scale = (maxRadiusPx / maxSystemDistance) * zoomFactor;
-    return Math.min(center + 60, au * scale);
+    return Math.min(center + 50, au * scale);
   };
 
   const starRGB = temperatureToRGB(currentTemp);
@@ -275,26 +285,29 @@ export default function HabitableZoneVisualizer({
       {/* Dynamic Telemetry & Zone Boundaries */}
       <div className="chz-telemetry-grid">
         <div className="chz-stat-box inner">
-          <span className="chz-stat-label">
-            <Flame size={11} /> {t('chzInnerBoundary')}
+          <span className="chz-stat-label" title={t('chzInnerBoundary')}>
+            <Flame size={10} />
+            <span>{t('chzInnerShort')}</span>
           </span>
-          <span className="chz-stat-val">{hz.runawayGreenhouseAU} AU</span>
+          <span className="chz-stat-val">{formatAU(hz.runawayGreenhouseAU)} AU</span>
           <span className="chz-stat-sub">{t('runawayGreenhouse')}</span>
         </div>
 
         <div className="chz-stat-box optimum">
-          <span className="chz-stat-label">
-            <ShieldCheck size={11} /> {t('chzEarthEquiv')}
+          <span className="chz-stat-label" title={t('chzEarthEquiv')}>
+            <ShieldCheck size={10} />
+            <span>{t('chzEarthEquivShort')}</span>
           </span>
-          <span className="chz-stat-val">{hz.earthEquivAU} AU</span>
+          <span className="chz-stat-val">{formatAU(hz.earthEquivAU)} AU</span>
           <span className="chz-stat-sub">1.0 S☉ {t('flux')}</span>
         </div>
 
         <div className="chz-stat-box outer">
-          <span className="chz-stat-label">
-            <Snowflake size={11} /> {t('chzOuterBoundary')}
+          <span className="chz-stat-label" title={t('chzOuterBoundary')}>
+            <Snowflake size={10} />
+            <span>{t('chzOuterShort')}</span>
           </span>
-          <span className="chz-stat-val">{hz.maximumGreenhouseAU} AU</span>
+          <span className="chz-stat-val">{formatAU(hz.maximumGreenhouseAU)} AU</span>
           <span className="chz-stat-sub">{t('maximumGreenhouse')}</span>
         </div>
       </div>

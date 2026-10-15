@@ -79,6 +79,9 @@ export default function ComparisonModal({
                           style={{
                             width: `${visualPx}px`,
                             height: `${visualPx}px`,
+                            borderRadius: '50%',
+                            aspectRatio: '1 / 1',
+                            display: 'block',
                             backgroundColor: rgb.css,
                             boxShadow: `0 0 25px ${rgb.css}99`
                           }}

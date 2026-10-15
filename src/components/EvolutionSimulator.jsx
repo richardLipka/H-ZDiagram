@@ -142,6 +142,8 @@ export default function EvolutionSimulator({
             <div
               className="sim-star-circle"
               style={{
+                borderRadius: '50%',
+                aspectRatio: '1 / 1',
                 backgroundColor: rgb.css,
                 boxShadow: `0 0 35px ${rgb.css}`
               }}

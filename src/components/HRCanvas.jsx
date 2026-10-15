@@ -703,6 +703,7 @@ export default function HRCanvas({
       if (filterClass !== 'ALL' && !star.spectralType.startsWith(filterClass)) continue;
       if (filterPlanetsOnly && !star.hasExoplanets) continue;
       if (filterSearch && !star.name.toLowerCase().includes(filterSearch.toLowerCase())) continue;
+      if (star.isExotic && !showRelativisticRemnants) continue;
 
       const pos = coords.toCanvas(star.temp, star.lum);
       if (!coords.isInPlotBounds(pos.x, pos.y)) continue;
@@ -928,7 +929,7 @@ export default function HRCanvas({
       }
     }
 
-    // Hit test famous stars for hover
+    // Hit test visible famous stars for hover (only reacting to stars visible in current view)
     const coords = new HRCoordinates(rect.width, rect.height, { top: 68, right: 75, bottom: 65, left: 85 });
     coords.setTransform(zoom, pan.x, pan.y);
 
@@ -936,7 +937,15 @@ export default function HRCanvas({
     let minD = 18;
 
     for (let star of famousStars) {
+      // Honor all active filters - do not react on filtered stars
+      if (filterClass !== 'ALL' && !star.spectralType.startsWith(filterClass)) continue;
+      if (filterPlanetsOnly && !star.hasExoplanets) continue;
+      if (filterSearch && !star.name.toLowerCase().includes(filterSearch.toLowerCase())) continue;
+      if (star.isExotic && !showRelativisticRemnants) continue;
+
       const p = coords.toCanvas(star.temp, star.lum);
+      if (!coords.isInPlotBounds(p.x, p.y)) continue;
+
       const dist = Math.hypot(p.x - x, p.y - y);
       if (dist < minD) {
         minD = dist;

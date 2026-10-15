@@ -8,6 +8,7 @@ import ComparisonModal from './components/ComparisonModal';
 import EducationalGuide from './components/EducationalGuide';
 import AttributionModal from './components/AttributionModal';
 import ControlPanel from './components/ControlPanel';
+import Footer from './components/Footer';
 
 import { loadStellarDatasets } from './services/dataLoader';
 import { getEvolutionState, EVOLUTION_TRACKS } from './simulation/evolutionTracks';
@@ -265,6 +266,9 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Persistent Academic & Institutional Footer */}
+      <Footer />
 
       {/* Comparison Modal Dialog */}
       {activeMode === 'compare' && (

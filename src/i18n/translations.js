@@ -216,6 +216,26 @@ export const translations = {
     authorHomepageLink: "Richard Lipka's Homepage (home.zcu.cz/~lipka)",
     dataPhilosophyNote: "Note on Data Architecture: All stellar coordinate, photometric, and physical parameters are completely decoupled from the UI code. Raw data files are hosted in /public/data/ and loaded asynchronously at runtime.",
 
+    // SIMBAD & CDS Aladin Telemetry
+    simbadSkyCutout: "CDS SIMBAD Sky Cutout",
+    photosphereModel: "Photosphere Model",
+    queryingSimbad: "Querying CDS Strasbourg",
+    simbadClass: "SIMBAD Class",
+    simbadPlx: "Parallax",
+    simbadRv: "Radial Vel.",
+
+    // Footer & Academic Affiliation
+    footerDepartment: "Department of Computer Science and Engineering (KIV)",
+    footerFaculty: "Faculty of Applied Sciences",
+    footerUniversity: "University of West Bohemia in Pilsen",
+    footerAuthorLabel: "Author & Research Lead",
+    footerMission: "Interactive Stellar Astrophysics & Astronomical Cartography Simulator",
+
+    // Compact Habitable Zone Labels
+    chzInnerShort: "Inner Limit",
+    chzEarthEquivShort: "Earth Equiv.",
+    chzOuterShort: "Outer Limit",
+
     // Units & Formats
     trillionYrs: "{val} Trillion yrs",
     billionYrs: "{val} Billion yrs",
@@ -439,6 +459,26 @@ export const translations = {
     authorAcademicDesc: "Vytvořil Richard Lipka jako interaktivní astrofyzikální a hvězdný kartografický simulátor. Určeno pro výuku astronomie, demonstrace výpočetní astrofyziky a interaktivní zkoumání stelárních vlastností.",
     authorHomepageLink: "Osobní stránka Richarda Lipky (home.zcu.cz/~lipka)",
     dataPhilosophyNote: "Poznámka k architektuře dat: Veškerá souřadnicová, fotometrická i fyzikální data hvězd jsou zcela oddělena od kódu rozhraní. Datové soubory jsou uloženy v adresáři /public/data/ a načítány asynchronně za běhu.",
+
+    // SIMBAD & CDS Aladin Telemetry
+    simbadSkyCutout: "Reálný snímek SIMBAD",
+    photosphereModel: "Model fotosféry",
+    queryingSimbad: "Dotazuji CDS Štrasburk",
+    simbadClass: "Třída SIMBAD",
+    simbadPlx: "Paralaxa",
+    simbadRv: "Radiální rychlost",
+
+    // Footer & Academic Affiliation
+    footerDepartment: "Katedra informatiky a výpočetní techniky (KIV)",
+    footerFaculty: "Fakulta aplikovaných věd",
+    footerUniversity: "Západočeská univerzita v Plzni",
+    footerAuthorLabel: "Autor a garant projektu",
+    footerMission: "Interaktivní simulátor stelární astrofyziky a hvězdné kartografie",
+
+    // Compact Habitable Zone Labels
+    chzInnerShort: "Vnitřní mez",
+    chzEarthEquivShort: "Země-ekviv.",
+    chzOuterShort: "Vnější mez",
 
     // Units & Formats
     trillionYrs: "{val} bilionů let",

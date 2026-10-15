@@ -1,6 +1,8 @@
+import React, { useState, useEffect } from 'react';
 import { temperatureToRGB } from '../simulation/blackbody';
-import { Sun, Compass, X, Scale, Target, ShieldAlert, BookOpen, ExternalLink } from 'lucide-react';
+import { Sun, Compass, X, Scale, Target, ShieldAlert, BookOpen, ExternalLink, Radio, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { getWikipediaUrl, getSimbadUrl, getStarCatalogLinks } from '../utils/catalogLinks';
+import { fetchSimbadData } from '../services/simbadService';
 import { useLanguage } from '../i18n/LanguageContext';
 
 import HabitableZoneVisualizer from './HabitableZoneVisualizer';
@@ -12,14 +14,56 @@ export default function StarInspector({
   isComparing
 }) {
   const { lang, t, formatLifetime, translateStageName } = useLanguage();
+  const [simbadData, setSimbadData] = useState(null);
+  const [loadedStarId, setLoadedStarId] = useState(null);
+  const [viewMode, setViewMode] = useState('simbad'); // 'simbad' | 'model'
+  const [imageError, setImageError] = useState(false);
+
+  const isLoadingSimbad = Boolean(star && loadedStarId !== star.id);
+
+  // Fetch SIMBAD and CDS Aladin data when star changes
+  useEffect(() => {
+    if (!star) return;
+
+    let isMounted = true;
+
+    fetchSimbadData(star)
+      .then((data) => {
+        if (!isMounted) return;
+        setSimbadData(data);
+        setLoadedStarId(star.id);
+        setImageError(false);
+        // Default to simbad view if data available and has image, else model
+        if (data && data.available && data.imageUrl) {
+          setViewMode('simbad');
+        } else {
+          setViewMode('model');
+        }
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setSimbadData({ available: false });
+        setLoadedStarId(star.id);
+        setImageError(false);
+        setViewMode('model');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [star]);
+
   if (!star) return null;
 
   const rgb = temperatureToRGB(star.temp);
   const lifetime = formatLifetime(star.mass);
   const catalogLinks = getStarCatalogLinks(star, lang);
 
-  // Scaled radius for astrometrics holographic preview
-  const visualScale = Math.max(16, Math.min(110, Math.log10(Math.max(0.01, star.radius)) * 26 + 44));
+  // Scaled radius for astrometrics holographic preview (constrained strictly to circle)
+  const visualScale = Math.max(22, Math.min(108, Math.log10(Math.max(0.01, star.radius)) * 26 + 46));
+
+  const hasSimbadImage = simbadData && simbadData.available && simbadData.imageUrl && !imageError;
+  const isShowingSimbad = viewMode === 'simbad' && hasSimbadImage;
 
   return (
     <aside className="star-inspector-panel hud-panel">
@@ -73,32 +117,117 @@ export default function StarInspector({
         </button>
       </div>
 
-      {/* Holographic Photosphere Sensor Chamber */}
+      {/* Holographic Sensor Chamber / CDS SIMBAD Sky Imagery */}
       <div className="photosphere-card hud-sensor-chamber">
+        {/* View Mode Switcher: SIMBAD Sky Cutout vs Physical Model */}
+        <div className="chamber-mode-selector">
+          <button
+            className={`chamber-toggle-btn ${isShowingSimbad ? 'active' : ''}`}
+            onClick={() => setViewMode('simbad')}
+            disabled={!hasSimbadImage && !isLoadingSimbad}
+            title={lang === 'cs' ? 'Reálný snímek z CDS SIMBAD / DSS2' : 'Real sky survey cutout from CDS SIMBAD / DSS2'}
+          >
+            <Radio size={11} />
+            <span>{t('simbadSkyCutout')}</span>
+          </button>
+          <button
+            className={`chamber-toggle-btn ${!isShowingSimbad ? 'active' : ''}`}
+            onClick={() => setViewMode('model')}
+            title={lang === 'cs' ? 'Syntetický model fotosféry (černé těleso)' : 'Physical blackbody photosphere model'}
+          >
+            <Sparkles size={11} />
+            <span>{t('photosphereModel')}</span>
+          </button>
+        </div>
+
+        {/* Circular Sensor Reticle Chamber */}
         <div className="sensor-reticle-ring">
           <div className="reticle-crosshair-h" />
           <div className="reticle-crosshair-v" />
-          <div className="photosphere-display">
-            <div
-              className="star-photosphere"
-              style={{
-                width: `${visualScale}px`,
-                height: `${visualScale}px`,
-                backgroundColor: rgb.css,
-                boxShadow: `0 0 ${visualScale * 0.9}px ${rgb.css}, 0 0 ${visualScale * 1.8}px rgba(0, 240, 255, 0.4)`
-              }}
-            >
-              <div className="star-core-highlight" />
+
+          {/* Real SIMBAD / Aladin HiPS Sky Cutout */}
+          {isShowingSimbad ? (
+            <div className="simbad-sky-aperture">
+              <img
+                src={simbadData.imageUrl}
+                alt={`${star.name} CDS SIMBAD sky cutout`}
+                className="simbad-sky-img"
+                onError={() => setImageError(true)}
+              />
+              <div className="simbad-optics-ring" />
             </div>
-          </div>
+          ) : (
+            /* Perfectly Round Physical Photosphere Model (Always Circle) */
+            <div className="photosphere-display">
+              <div
+                className="star-photosphere"
+                style={{
+                  width: `${visualScale}px`,
+                  height: `${visualScale}px`,
+                  borderRadius: '50%',
+                  aspectRatio: '1 / 1',
+                  backgroundColor: rgb.css,
+                  boxShadow: `0 0 ${visualScale * 0.9}px ${rgb.css}, 0 0 ${visualScale * 1.8}px rgba(0, 240, 255, 0.4)`
+                }}
+              >
+                <div className="star-core-highlight" />
+              </div>
+            </div>
+          )}
+
+          {/* Loading Radar Sweep */}
+          {isLoadingSimbad && (
+            <div className="chamber-loading-overlay">
+              <div className="radar-sweep-spinner" />
+              <span className="radar-loading-label">{t('queryingSimbad')}...</span>
+            </div>
+          )}
         </div>
 
+        {/* Chamber Caption */}
         <div className="photosphere-caption hud-telemetry-caption">
-          <span className="color-temp-badge hud-temp-badge" style={{ borderColor: rgb.css, color: '#ffffff' }}>
-            {star.temp.toLocaleString()} K • {t('classLabel')} {star.spectralType}
-          </span>
+          {isShowingSimbad ? (
+            <span className="simbad-source-badge">
+              <ImageIcon size={10} />
+              {simbadData.isSolarSpecial ? 'NASA SDO AIA // Solar Photosphere' : 'CDS Strasbourg SIMBAD // DSS2 Color Cutout'}
+            </span>
+          ) : (
+            <span className="color-temp-badge hud-temp-badge" style={{ borderColor: rgb.css, color: '#ffffff' }}>
+              {star.temp.toLocaleString()} K • {t('classLabel')} {star.spectralType}
+            </span>
+          )}
           <span className="stage-text hud-stage-text">// {translateStageName(star.evolutionaryStage).toUpperCase()}</span>
         </div>
+
+        {/* SIMBAD Real Astronomical Telemetry (If Available) */}
+        {simbadData && simbadData.available && (
+          <div className="simbad-telemetry-strip">
+            {simbadData.ra !== null && simbadData.dec !== null && (
+              <div className="simbad-tel-item">
+                <span className="simbad-tel-lbl">J2000:</span>
+                <span className="simbad-tel-val">{simbadData.ra.toFixed(3)}°, {simbadData.dec >= 0 ? `+${simbadData.dec.toFixed(3)}` : simbadData.dec.toFixed(3)}°</span>
+              </div>
+            )}
+            {simbadData.objectType && (
+              <div className="simbad-tel-item">
+                <span className="simbad-tel-lbl">{t('simbadClass')}:</span>
+                <span className="simbad-tel-val highlight">{simbadData.objectType}</span>
+              </div>
+            )}
+            {simbadData.parallax !== null && (
+              <div className="simbad-tel-item">
+                <span className="simbad-tel-lbl">{t('simbadPlx')}:</span>
+                <span className="simbad-tel-val">{simbadData.parallax} mas</span>
+              </div>
+            )}
+            {simbadData.radVel !== null && (
+              <div className="simbad-tel-item">
+                <span className="simbad-tel-lbl">{t('simbadRv')}:</span>
+                <span className="simbad-tel-val">{simbadData.radVel > 0 ? `+${simbadData.radVel}` : simbadData.radVel} km/s</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Circumstellar Habitable Zone & 2D Orbital Radar */}
@@ -205,4 +334,3 @@ export default function StarInspector({
     </aside>
   );
 }
-
