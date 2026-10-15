@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#04183a" />
+      <stop offset="80%" stop-color="#020612" />
+      <stop offset="100%" stop-color="#010307" />
+    </radialGradient>
+    <radialGradient id="starBlue" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="40%" stop-color="#9bb0ff" />
+      <stop offset="100%" stop-color="#00f0ff" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="starGold" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="50%" stop-color="#ffbe80" />
+      <stop offset="100%" stop-color="#ff6060" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="msTrack" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.8" />
+      <stop offset="50%" stop-color="#ffffdd" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#ff6060" stop-opacity="0.7" />
+    </linearGradient>
+  </defs>
+
+  <!-- Deep space background rounded tile -->
+  <rect width="100" height="100" rx="20" fill="url(#bgGlow)" stroke="#00f0ff" stroke-width="2.5" stroke-opacity="0.4" />
+
+  <!-- Astrometric coordinate grid ticks -->
+  <path d="M 16 16 L 16 84 L 84 84" fill="none" stroke="#00f0ff" stroke-width="2" stroke-opacity="0.5" stroke-linecap="round" />
+  
+  <!-- Subtle grid lines -->
+  <line x1="16" y1="50" x2="84" y2="50" stroke="#0088ff" stroke-width="1" stroke-dasharray="3,3" stroke-opacity="0.3" />
+  <line x1="50" y1="16" x2="50" y2="84" stroke="#0088ff" stroke-width="1" stroke-dasharray="3,3" stroke-opacity="0.3" />
+
+  <!-- Main Sequence Curved Trajectory -->
+  <path d="M 24 24 Q 45 48, 76 76" fill="none" stroke="url(#msTrack)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="2,3" />
+
+  <!-- Supergiant / Giant (Top Right) -->
+  <circle cx="70" cy="30" r="7" fill="#ff6060" fill-opacity="0.85" />
+  <circle cx="70" cy="30" r="3" fill="#ffffff" />
+
+  <!-- Hot Blue Main Sequence Star (Top Left) -->
+  <circle cx="28" cy="28" r="6" fill="#9bb0ff" fill-opacity="0.9" />
+  <circle cx="28" cy="28" r="2.5" fill="#ffffff" />
+
+  <!-- Solar-Type Star (Sol / Center) -->
+  <circle cx="50" cy="52" r="4.5" fill="#fff4d0" />
+  <circle cx="50" cy="52" r="1.8" fill="#ffffff" />
+
+  <!-- Red Dwarf (Bottom Right) -->
+  <circle cx="74" cy="74" r="3.5" fill="#ff4040" />
+
+  <!-- White Dwarf (Bottom Left) -->
+  <circle cx="34" cy="72" r="3.2" fill="#88eeff" />
+  <circle cx="34" cy="72" r="1.2" fill="#ffffff" />
+
+  <!-- Target Reticle around Sol -->
+  <circle cx="50" cy="52" r="9" fill="none" stroke="#00f0ff" stroke-width="1.2" stroke-opacity="0.75" />
+</svg>

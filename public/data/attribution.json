@@ -1,0 +1,41 @@
+{
+  "datasetName": "HYG Stellar Database",
+  "version": "3.8",
+  "compiler": "David Nash (Astronexus)",
+  "license": "Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)",
+  "originalSourceUrl": "https://github.com/astronexus/HYG-Database",
+  "codebergUrl": "https://codeberg.org/astronexus/hyg",
+  "citation": "Nash, D. (2019). The HYG Database, version 3.8. astronexus.com.",
+  "constituentCatalogs": [
+    {
+      "name": "Hipparcos and Tycho Catalogues",
+      "organization": "European Space Agency (ESA)",
+      "year": 1997,
+      "bibcode": "1997A&A...323L..49P",
+      "description": "Primary astrometric data, precise parallaxes, and high-accuracy visual magnitudes."
+    },
+    {
+      "name": "The Bright Star Catalogue, 5th Revised Ed.",
+      "authors": "Hoffleit, D. and Warren, W. H. Jr.",
+      "organization": "Yale University Observatory",
+      "year": 1991,
+      "bibcode": "1991bsc..book.....H",
+      "description": "Harvard Revised (HR) designations, spectral types, and historical designations."
+    },
+    {
+      "name": "Third Catalogue of Nearby Stars (CNS3)",
+      "authors": "Gliese, W. and Jahreiß, H.",
+      "organization": "Astronomisches Rechen-Institut Heidelberg",
+      "year": 1991,
+      "bibcode": "1991cns3.rep.....G",
+      "description": "Stellar parameters for stars within 25 parsecs of the Sun."
+    },
+    {
+      "name": "NASA Exoplanet Archive",
+      "organization": "NASA / Caltech-IPAC",
+      "url": "https://exoplanetarchive.ipac.caltech.edu/",
+      "description": "Confirmed exoplanet host counts, discovery dates, and planetary system properties."
+    }
+  ],
+  "lastUpdated": "2026-10-14T19:04:03.148Z"
+}
