@@ -11,6 +11,19 @@ const QUICK_ADD_IDS = ['sun', 'betelgeuse', 'sirius_a', 'sirius_b', 'proxima_cen
 
 export default function ComparisonModal({ compareStars, famousStars, onRemoveFromCompare, onAddStarToCompare, onClearCompare, onClose }) {
   const { lang, t, formatLifetime } = useLanguage();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const availableStars = famousStars.filter((s) => !compareStars.some((cs) => cs.id === s.id));
+  const searchMatches = searchTerm
+    ? availableStars.filter((s) => s.name.toLowerCase().includes(searchTerm.toLowerCase())).slice(0, 8)
+    : [];
+
+  const handleSelectStar = (star) => {
+    onAddStarToCompare(star);
+    setSearchTerm('');
+    setIsDropdownOpen(false);
+  };
 
   const rows = [
     { label: t('spectralClass'), render: (s) => s.spectralType, className: 'mono-cell' },
@@ -36,12 +49,18 @@ export default function ComparisonModal({ compareStars, famousStars, onRemoveFro
     }
   ];
 
+  const quickPicks = QUICK_ADD_IDS
+    .map((id) => famousStars.find((st) => st.id === id))
+    .filter(Boolean)
+    .filter((s) => !compareStars.some((cs) => cs.id === s.id));
+
   return (
     <Modal labelledBy="comparison-title" className="comparison-modal-content" onClose={onClose}>
       <div className="modal-header">
         <div className="modal-title-group">
           <Scale size={20} className="modal-icon" aria-hidden="true" />
           <h2 id="comparison-title">{t('comparisonTitle')}</h2>
+          <span className="compare-slot-badge">{t('compareSlotCount', { count: compareStars.length, max: 4 })}</span>
         </div>
         <div className="modal-header-actions">
           {compareStars.length > 0 && (
@@ -93,6 +112,59 @@ export default function ComparisonModal({ compareStars, famousStars, onRemoveFro
               })}
             </div>
           </div>
+
+          {compareStars.length < 4 && (
+            <div className="compare-add-controls hud-sensor-chamber">
+              <div className="compare-search-box">
+                <input
+                  type="text"
+                  placeholder={t('searchStarToCompare')}
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setIsDropdownOpen(true);
+                  }}
+                  onFocus={() => setIsDropdownOpen(true)}
+                  className="search-field hud-input"
+                />
+                {isDropdownOpen && searchMatches.length > 0 && (
+                  <ul className="search-autocomplete-dropdown hud-dropdown" role="listbox">
+                    {searchMatches.map((s) => (
+                      <li
+                        key={s.id}
+                        role="option"
+                        className="autocomplete-item hud-dropdown-item"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => handleSelectStar(s)}
+                      >
+                        <span className="ac-name">{s.name}</span>
+                        <span className="ac-class">{s.spectralType} ({formatInt(s.temp, lang)} K)</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {quickPicks.length > 0 && (
+                <div className="compare-quick-row">
+                  <span className="compare-quick-label">{t('quickAddCompare')}</span>
+                  <div className="quick-add-chips">
+                    {quickPicks.slice(0, 5).map((s) => (
+                      <button
+                        type="button"
+                        key={s.id}
+                        className="quick-add-chip"
+                        onClick={() => onAddStarToCompare(s)}
+                      >
+                        <Plus size={12} aria-hidden="true" />
+                        <span>{s.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="table-responsive">
             <table className="comparison-table">

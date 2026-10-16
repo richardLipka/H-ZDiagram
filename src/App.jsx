@@ -8,6 +8,7 @@ import AcademySimulator from './components/AcademySimulator';
 import ComparisonModal from './components/ComparisonModal';
 import EducationalGuide from './components/EducationalGuide';
 import AttributionModal from './components/AttributionModal';
+import CustomStarModal from './components/CustomStarModal';
 import ControlPanel from './components/ControlPanel';
 import Footer from './components/Footer';
 
@@ -25,6 +26,14 @@ export default function App() {
 
   // Datasets loaded asynchronously from public/data/
   const [famousStars, setFamousStars] = useState([]);
+  const [customStars, setCustomStars] = useState(() => {
+    try {
+      const saved = localStorage.getItem('hr_custom_stars');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [backgroundStars, setBackgroundStars] = useState([]);
   const [clusterMembers, setClusterMembers] = useState({ pleiades: [], hyades: [] });
   const [attribution, setAttribution] = useState(null);
@@ -34,6 +43,7 @@ export default function App() {
   const [activeMode, setActiveMode] = useState('explore'); // explore | evolution | cluster | academy | compare
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [isAttributionOpen, setIsAttributionOpen] = useState(false);
+  const [isCustomStarModalOpen, setIsCustomStarModalOpen] = useState(false);
   const [selectedStar, setSelectedStar] = useState(null);
   const [compareStars, setCompareStars] = useState([]);
   const [compareNotice, setCompareNotice] = useState(false);
@@ -42,6 +52,7 @@ export default function App() {
   const [filterSearch, setFilterSearch] = useState('');
   const [filterClass, setFilterClass] = useState('ALL');
   const [filterPlanetsOnly, setFilterPlanetsOnly] = useState(false);
+  const [showNamedStars, setShowNamedStars] = useState(true);
   const [showIsoradii, setShowIsoradii] = useState(true);
   const [showRegions, setShowRegions] = useState(true);
   const [showBackgroundPopulation, setShowBackgroundPopulation] = useState(true);
@@ -56,6 +67,14 @@ export default function App() {
 
   // Cluster age (Gyr); starts at the Pleiades
   const [clusterAgeGyr, setClusterAgeGyr] = useState(0.125);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('hr_custom_stars', JSON.stringify(customStars));
+    } catch (e) {
+      console.warn('Failed to save custom stars to localStorage', e);
+    }
+  }, [customStars]);
 
   useEffect(() => {
     loadStellarDatasets()
@@ -77,6 +96,45 @@ export default function App() {
         setLoadError(true);
         setIsLoadingData(false);
       });
+  }, []);
+
+  const allStars = useMemo(() => [...famousStars, ...customStars], [famousStars, customStars]);
+
+  const handleAddCustomStar = useCallback((newStar) => {
+    setCustomStars((prev) => {
+      if (prev.some((s) => s.id === newStar.id)) return prev;
+      return [newStar, ...prev];
+    });
+  }, []);
+
+  const handleRemoveCustomStar = useCallback((id) => {
+    setCustomStars((prev) => prev.filter((s) => s.id !== id));
+    setSelectedStar((cur) => (cur && cur.id === id ? null : cur));
+    setCompareStars((prev) => prev.filter((s) => s.id !== id));
+  }, []);
+
+  const handleClearCustomStars = useCallback(() => {
+    setCustomStars([]);
+    setSelectedStar((cur) => (cur && cur.isCustom ? null : cur));
+    setCompareStars((prev) => prev.filter((s) => !s.isCustom));
+  }, []);
+
+  const handleImportCustomStars = useCallback((stars) => {
+    if (!Array.isArray(stars)) return;
+    const validStars = stars.map((s, idx) => ({
+      ...s,
+      id: s.id || `custom_imported_${Date.now()}_${idx}`,
+      isCustom: true
+    }));
+    setCustomStars((prev) => {
+      const existingIds = new Set(prev.map((s) => s.id));
+      const fresh = validStars.filter((s) => !existingIds.has(s.id));
+      return [...fresh, ...prev];
+    });
+  }, []);
+
+  const handleOpenCustomStarModal = useCallback(() => {
+    setIsCustomStarModalOpen(true);
   }, []);
 
   const evolutionState = useMemo(() => getEvolutionState(evolutionMass, evolutionProgress), [evolutionMass, evolutionProgress]);
@@ -146,6 +204,8 @@ export default function App() {
           onSelectClass={setFilterClass}
           filterPlanetsOnly={filterPlanetsOnly}
           onTogglePlanetsOnly={() => setFilterPlanetsOnly((v) => !v)}
+          showNamedStars={showNamedStars}
+          onToggleNamedStars={() => setShowNamedStars((v) => !v)}
           showIsoradii={showIsoradii}
           onToggleIsoradii={() => setShowIsoradii((v) => !v)}
           showRegions={showRegions}
@@ -158,14 +218,16 @@ export default function App() {
           onToggleGaiaFineStructure={() => setShowGaiaFineStructure((v) => !v)}
           showRelativisticRemnants={showRelativisticRemnants}
           onToggleRelativisticRemnants={() => setShowRelativisticRemnants((v) => !v)}
-          famousStars={famousStars}
+          famousStars={allStars}
           backgroundCount={backgroundStars.length}
           onSelectStar={setSelectedStar}
+          onOpenCustomStarModal={handleOpenCustomStarModal}
+          customStarsCount={customStars.length}
         />
 
         <div className="diagram-workspace">
           <HRCanvas
-            famousStars={famousStars}
+            famousStars={allStars}
             backgroundStars={backgroundStars}
             selectedStar={selectedStar}
             onSelectStar={setSelectedStar}
@@ -178,6 +240,7 @@ export default function App() {
             filterClass={filterClass}
             filterPlanetsOnly={filterPlanetsOnly}
             filterSearch={filterSearch}
+            showNamedStars={showNamedStars}
             showIsoradii={showIsoradii}
             showRegions={showRegions}
             showBackgroundPopulation={showBackgroundPopulation}
@@ -203,7 +266,7 @@ export default function App() {
           )}
 
           {activeMode === 'academy' && (
-            <AcademySimulator selectedStar={selectedStar} onSelectStar={setSelectedStar} famousStars={famousStars} />
+            <AcademySimulator selectedStar={selectedStar} onSelectStar={setSelectedStar} famousStars={allStars} />
           )}
         </div>
 
@@ -228,7 +291,7 @@ export default function App() {
       {activeMode === 'compare' && (
         <ComparisonModal
           compareStars={compareStars}
-          famousStars={famousStars}
+          famousStars={allStars}
           onRemoveFromCompare={(id) => setCompareStars((prev) => prev.filter((s) => s.id !== id))}
           onAddStarToCompare={addToCompare}
           onClearCompare={() => setCompareStars([])}
@@ -238,6 +301,17 @@ export default function App() {
 
       {isGuideOpen && <EducationalGuide onClose={closeGuide} />}
       {isAttributionOpen && <AttributionModal attribution={attribution} onClose={closeAttribution} />}
+      {isCustomStarModalOpen && (
+        <CustomStarModal
+          customStars={customStars}
+          onAddCustomStar={handleAddCustomStar}
+          onRemoveCustomStar={handleRemoveCustomStar}
+          onClearCustomStars={handleClearCustomStars}
+          onImportCustomStars={handleImportCustomStars}
+          onSelectStar={setSelectedStar}
+          onClose={() => setIsCustomStarModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

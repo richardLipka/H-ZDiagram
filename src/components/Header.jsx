@@ -1,5 +1,5 @@
 import React from 'react';
-import { Telescope, Orbit, Clock, Layers, BookOpen, Database, Globe, GraduationCap } from 'lucide-react';
+import { Telescope, Orbit, Clock, Layers, Info, Database, Globe, GraduationCap } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 
 const MODES = [
@@ -41,7 +41,7 @@ export default function Header({ activeMode, setActiveMode, onOpenGuide, onOpenA
         ))}
 
         <button type="button" className="nav-btn hud-btn guide-btn" onClick={onOpenGuide} title={t('navManualTitle')}>
-          <BookOpen size={15} aria-hidden="true" />
+          <Info size={15} aria-hidden="true" />
           <span>{t('navManual')}</span>
         </button>
 

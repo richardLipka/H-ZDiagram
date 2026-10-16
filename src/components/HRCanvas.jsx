@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import { HRCoordinates, SPECTRAL_CLASSES, CONSTANT_RADII, DEFAULT_BOUNDS } from '../utils/coordinates';
 import { temperatureToRGB } from '../simulation/blackbody';
 import { mainSequenceParams, MAMAJEK_DWARF_SEQUENCE } from '../simulation/mainSequence';
+import { radiusFromLumTemp } from '../simulation/physics';
 import { useLanguage } from '../i18n/LanguageContext';
 import { formatSig, formatInt } from '../utils/format';
 
@@ -42,6 +43,7 @@ export default function HRCanvas({
   filterClass,
   filterPlanetsOnly,
   filterSearch,
+  showNamedStars = true,
   showIsoradii,
   showRegions,
   showBackgroundPopulation,
@@ -563,6 +565,7 @@ export default function HRCanvas({
     ctx.save();
     clipToPlot();
     for (const star of famousStars) {
+      if (!showNamedStars && !star.isCustom) continue;
       if (!isVisible(star, filters)) continue;
       const pos = starPosition(coords, star);
       if (!coords.isInPlotBounds(pos.x, pos.y)) continue;
@@ -570,7 +573,7 @@ export default function HRCanvas({
       const rgb = temperatureToRGB(star.temp);
       const isSelected = selectedStar && selectedStar.id === star.id;
       const isHovered = hoveredStar && hoveredStar.id === star.id;
-      let dotRadius = 4;
+      let dotRadius = star.isCustom ? 5.5 : 4;
       if (star.luminosityClass === 'I') dotRadius = 6.5;
       else if (star.luminosityClass === 'III' || star.luminosityClass === 'II') dotRadius = 5.2;
       else if (star.luminosityClass === 'D') dotRadius = 3.2;
@@ -590,7 +593,27 @@ export default function HRCanvas({
         ctx.shadowBlur = 16;
       }
 
-      if (pos.offScale) {
+      if (star.isCustom) {
+        // Custom star: distinctive glowing diamond marker
+        const dSize = dotRadius + 3;
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 2;
+        ctx.fillStyle = rgb.css;
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y - dSize);
+        ctx.lineTo(pos.x + dSize, pos.y);
+        ctx.lineTo(pos.x, pos.y + dSize);
+        ctx.lineTo(pos.x - dSize, pos.y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (pos.offScale) {
         // Off-scale object: arrow pointing to the hot side
         ctx.fillStyle = '#c084fc';
         ctx.beginPath();
@@ -611,13 +634,14 @@ export default function HRCanvas({
       }
       ctx.shadowBlur = 0;
 
-      if (showFamousLabels || isSelected || isHovered) {
+      if (showFamousLabels || isSelected || isHovered || star.isCustom) {
         ctx.font = isSelected ? '700 11px "JetBrains Mono", monospace' : '500 10px "JetBrains Mono", monospace';
-        ctx.fillStyle = isSelected ? '#00f0ff' : '#ffffff';
+        ctx.fillStyle = isSelected ? '#00f0ff' : star.isCustom ? '#38bdf8' : '#ffffff';
         ctx.shadowColor = '#000000';
         ctx.shadowBlur = 4;
         ctx.textAlign = 'left';
-        ctx.fillText(pos.offScale ? `${star.name} (${formatInt(star.temp, lang)} K)` : star.name, pos.x + dotRadius + 8, pos.y + 3);
+        const prefix = star.isCustom ? '✦ ' : '';
+        ctx.fillText(pos.offScale ? `${prefix}${star.name} (${formatInt(star.temp, lang)} K)` : `${prefix}${star.name}`, pos.x + dotRadius + 8, pos.y + 3);
         ctx.shadowBlur = 0;
       }
     }
@@ -661,7 +685,7 @@ export default function HRCanvas({
   }, [
     zoom, pan, dimensions, famousStars, backgroundStars, selectedStar, hoveredStar, activeMode,
     evolutionState, evolutionTrackPoints, clusterIsochrone, clusterMembers, clusterAgeGyr,
-    filters, filterClass, filterPlanetsOnly, filterSearch, showIsoradii, showRegions, showBackgroundPopulation,
+    filters, filterClass, filterPlanetsOnly, filterSearch, showNamedStars, showIsoradii, showRegions, showBackgroundPopulation,
     showFamousLabels, showGaiaFineStructure, showRelativisticRemnants, lang, t
   ]);
 
@@ -671,12 +695,15 @@ export default function HRCanvas({
     return coords;
   };
 
-  // Nearest visible catalogue star to a point within maxDist pixels
+  // Nearest visible catalogue or background star to a point within maxDist pixels
   const hitTest = (x, y, rect, maxDist) => {
     const coords = coordsForRect(rect);
     let found = null;
     let minD = maxDist;
+
+    // 1. Check named & custom stars
     for (const star of famousStars) {
+      if (!showNamedStars && !star.isCustom) continue;
       if (!isVisible(star, filters)) continue;
       const p = starPosition(coords, star);
       if (!coords.isInPlotBounds(p.x, p.y)) continue;
@@ -684,6 +711,37 @@ export default function HRCanvas({
       if (d < minD) {
         minD = d;
         found = star;
+      }
+    }
+
+    // 2. If nothing matched and Hipparcos background population is visible, check background survey stars
+    if (!found && showBackgroundPopulation && backgroundStars && backgroundStars.length > 0) {
+      let bgMinD = Math.min(maxDist, 10);
+      for (let i = 0; i < backgroundStars.length; i++) {
+        const [temp, lum, specClass, lumClass] = backgroundStars[i];
+        if (filterClass !== 'ALL' && specClass !== filterClass) continue;
+        const p = coords.toCanvas(temp, lum);
+        if (!coords.isInPlotBounds(p.x, p.y)) continue;
+        const d = Math.hypot(p.x - x, p.y - y);
+        if (d < bgMinD) {
+          bgMinD = d;
+          const rad = radiusFromLumTemp(lum, temp);
+          found = {
+            id: `hip_bg_${i}`,
+            name: `${lang === 'cs' ? 'Hvězda pole Hipparcos' : 'Hipparcos field star'} #${i + 1}`,
+            temp,
+            lum,
+            radius: rad,
+            spectralType: `${specClass}${lumClass || 'V'}`,
+            spectralClass: specClass,
+            luminosityClass: lumClass || 'V',
+            absMag: Number((4.74 - 2.5 * Math.log10(Math.max(1e-6, lum))).toFixed(2)),
+            isBackgroundFieldStar: true,
+            dataSource: 'hipparcos_survey',
+            notableFacts: `Point from the Hipparcos catalog background survey (van Leeuwen 2007) with relative parallax error < 10%. Effective temperature: ${formatInt(temp, 'en')} K, Luminosity: ${formatSig(lum, 'en')} L☉.`,
+            notableFactsCs: `Objekt z přehlídky katalogu Hipparcos (van Leeuwen 2007) s chybou paralaxy pod 10 %. Efektivní teplota: ${formatInt(temp, 'cs')} K, zářivý výkon: ${formatSig(lum, 'cs')} L☉.`
+          };
+        }
       }
     }
     return found;

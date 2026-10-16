@@ -106,9 +106,21 @@ export default function StarInspector({ star, onClose, onAddToCompare, isCompari
             {star.planetCount > 0 && <span className="exoplanet-header-pill">🪐 {t('solarPlanets', { count: star.planetCount })}</span>}
           </div>
         </div>
-        <button type="button" className="close-inspector-btn hud-close" onClick={onClose} title={t('close')} aria-label={t('close')}>
-          <X size={18} aria-hidden="true" />
-        </button>
+        <div className="inspector-header-controls">
+          <button
+            type="button"
+            className={`action-btn hud-action-btn header-compare-btn ${isComparing ? 'active' : ''}`}
+            onClick={() => onAddToCompare(star)}
+            aria-pressed={isComparing}
+            title={isComparing ? t('disengageCompare') : t('engageCompare')}
+          >
+            <Scale size={13} aria-hidden="true" />
+            <span>{isComparing ? t('disengageCompareShort') : t('engageCompareShort')}</span>
+          </button>
+          <button type="button" className="close-inspector-btn hud-close" onClick={onClose} title={t('close')} aria-label={t('close')}>
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
       {/* Sky image or photosphere model */}

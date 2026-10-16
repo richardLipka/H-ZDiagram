@@ -17,11 +17,13 @@ An interactive Hertzsprung–Russell (H–R) diagram for teaching stellar astrop
 
 The H–R diagram plots stellar luminosity *L/L☉* against effective temperature *T*<sub>eff</sub> (temperature decreasing to the right). The application lets you:
 
-- explore **7,475 Hipparcos stars** with parallax errors below 10 %, plus about 400 stars with proper names and about 60 benchmark objects with literature values (the Sun, Sirius A and B, Betelgeuse, Rigel, Vega, Proxima Centauri, TRAPPIST-1, three nearby white dwarfs, the Cygnus X-1 donor star, the neutron star RX J1856.5−3754, and well-known exoplanet hosts);
+- explore **7,475 Hipparcos stars** with parallax errors below 10 % (all points interactively hoverable and clickable for inspection), plus about 400 stars with proper names and about 60 benchmark objects with literature values;
+- **search any star online** via CDS Sesame / SIMBAD (e.g. by Bayer designation, HD, HIP, Gliese, or exoplanet host name) to resolve its coordinates, spectral type, photometry, and parallax, and plot it directly on the diagram;
+- **create and manage custom star datasets** with manual parameter entry, persistent browser storage, and JSON import/export;
 - follow schematic **evolutionary tracks** for initial masses of 0.4, 1, 3, 15 and 25 M☉;
 - estimate **cluster ages** from the main-sequence turn-off and compare with Pleiades and Hyades members;
 - show **habitable-zone limits** (Kopparapu et al. 2014) and the planets of selected systems;
-- compare up to four stars side by side and solve three short exercises (Academy).
+- compare up to four stars side by side with built-in search and quick-add chips, and solve three short exercises (Academy).
 
 ---
 
@@ -29,11 +31,13 @@ The H–R diagram plots stellar luminosity *L/L☉* against effective temperatur
 
 | Mode | What it does |
 | --- | --- |
-| **Explore** | Click a star or use the search box. The inspector shows a DSS2 sky image (CDS hips2fits), SIMBAD data, a Planck continuum with schematic absorption lines, the energy source in the core, the habitable zone, physical parameters and links to Wikipedia, SIMBAD, VizieR, the NASA Exoplanet Archive and NASA ADS. |
+| **Explore** | Click any star (including Hipparcos background points) or use the search box. The inspector shows a DSS2 sky image (CDS hips2fits), SIMBAD data, a Planck continuum with schematic absorption lines, the energy source in the core, the habitable zone, physical parameters and links to Wikipedia, SIMBAD, VizieR, the NASA Exoplanet Archive and NASA ADS. |
+| **Online Search & Custom Stars** | Search the CDS Sesame resolver by any star name or catalog number to calculate $T_{\mathrm{eff}}$, $L/L_\odot$, radius, and spectral classification on the fly, or manually input parameters. Custom stars are plotted with glowing markers and can be saved, exported, or imported as JSON. |
 | **Evolution** | Tracks for 0.4, 1, 3, 15 and 25 M☉ from the pre-main sequence to the remnant (white dwarf, neutron star or black hole). The time axis is not to scale. |
 | **Clusters** | A schematic isochrone for ages from 50 Myr to 13.5 Gyr; presets: Pleiades (~125 Myr), Hyades (~625 Myr), M67 (~4 Gyr), 47 Tucanae (~12 Gyr). Hipparcos members of the Pleiades and Hyades are overplotted. |
 | **Academy** | Find a Sun-like star, a host of a planet in the habitable zone, and a white dwarf. |
-| **Compare** | Up to four stars: temperature, luminosity, radius, mass, habitable zone, main-sequence lifetime, planets. |
+| **Compare** | Compare up to four stars: direct search and benchmark quick-adds inside the modal, or one-click toggle in the inspector header. Shows temperature, luminosity, radius, mass, habitable zone, main-sequence lifetime, and exoplanetary systems side by side. |
+| **Info & Data Sources** | Comprehensive astrophysical guide and literature citations with direct outbound links to source catalogues (HYG, Hipparcos, NASA Exoplanet Archive, Pecaut & Mamajek, Torres, Kopparapu, NIST ASD, ESO UVES POP, and CDS SIMBAD). |
 
 Diagram layers: Hipparcos background, main sequence and instability strip, lines of constant radius, star names, exoplanet hosts only, Gaia fine structure (equal-mass binary sequence, Jao gap, crystallizing white dwarfs) and compact remnants.
 

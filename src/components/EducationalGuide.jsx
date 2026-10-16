@@ -1,7 +1,52 @@
 import React from 'react';
-import { X, BookOpen, HelpCircle, Lightbulb, Compass, Award, Ruler } from 'lucide-react';
+import { X, BookOpen, HelpCircle, Lightbulb, Compass, Award, Ruler, Database, ExternalLink } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import Modal from './Modal';
+
+const CATALOG_RESOURCES = [
+  {
+    titleKey: 'guideCatHYG',
+    descKey: 'guideCatHYGDesc',
+    url: 'https://github.com/astronexus/HYG-Database',
+    badge: 'HYG Database'
+  },
+  {
+    titleKey: 'guideCatNEA',
+    descKey: 'guideCatNEADesc',
+    url: 'https://exoplanetarchive.ipac.caltech.edu/',
+    badge: 'NASA IPAC'
+  },
+  {
+    titleKey: 'guideCatMamajek',
+    descKey: 'guideCatMamajekDesc',
+    url: 'https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt',
+    badge: 'ApJS 208, 9'
+  },
+  {
+    titleKey: 'guideCatTorres',
+    descKey: 'guideCatTorresDesc',
+    url: 'https://ui.adsabs.harvard.edu/abs/2010A%26ARv..18...67T/abstract',
+    badge: 'A&ARv 18, 67'
+  },
+  {
+    titleKey: 'guideCatKopparapu',
+    descKey: 'guideCatKopparapuDesc',
+    url: 'https://arxiv.org/abs/1404.5292',
+    badge: 'ApJ 787, L29'
+  },
+  {
+    titleKey: 'guideCatSpectroscopy',
+    descKey: 'guideCatSpectroscopyDesc',
+    url: 'https://www.eso.org/sci/observing/tools/uvespop.html',
+    badge: 'ESO VLT / NIST'
+  },
+  {
+    titleKey: 'guideCatSimbad',
+    descKey: 'guideCatSimbadDesc',
+    url: 'https://simbad.cds.unistra.fr/simbad/',
+    badge: 'CDS Strasbourg'
+  }
+];
 
 export default function EducationalGuide({ onClose }) {
   const { t } = useLanguage();
@@ -74,7 +119,37 @@ export default function EducationalGuide({ onClose }) {
             <li>{t('guideSec5Item4')}</li>
           </ul>
         </section>
+
+        <section className="guide-section highlight-box">
+          <div className="guide-section-header">
+            <Database size={18} aria-hidden="true" />
+            <h3>{t('guideSec6Title')}</h3>
+          </div>
+          <p>{t('guideSec6Desc')}</p>
+          <div className="catalogs-list guide-catalogs-grid">
+            {CATALOG_RESOURCES.map((res) => (
+              <a
+                key={res.titleKey}
+                href={res.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="catalog-card guide-cat-card"
+              >
+                <div className="catalog-header">
+                  <h4>{t(res.titleKey)}</h4>
+                  <span className="cat-badge cat-badge-simbad">{res.badge}</span>
+                  <ExternalLink size={12} className="catalog-ext-icon" aria-hidden="true" />
+                </div>
+                <p className="cat-desc">{t(res.descKey)}</p>
+                <span className="cat-url-link">
+                  <span>{res.url}</span>
+                </span>
+              </a>
+            ))}
+          </div>
+        </section>
       </div>
     </Modal>
   );
 }
+

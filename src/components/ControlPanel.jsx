@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, SlidersHorizontal } from 'lucide-react';
+import { Search, Filter, SlidersHorizontal, PlusCircle } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { formatInt } from '../utils/format';
 
@@ -21,6 +21,8 @@ export default function ControlPanel({
   onSelectClass,
   filterPlanetsOnly,
   onTogglePlanetsOnly,
+  showNamedStars,
+  onToggleNamedStars,
   showIsoradii,
   onToggleIsoradii,
   showRegions,
@@ -35,7 +37,9 @@ export default function ControlPanel({
   onToggleRelativisticRemnants,
   famousStars,
   backgroundCount,
-  onSelectStar
+  onSelectStar,
+  onOpenCustomStarModal,
+  customStarsCount = 0
 }) {
   const { t, lang } = useLanguage();
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -116,8 +120,29 @@ export default function ControlPanel({
                 <span className="ac-class">{s.spectralType}</span>
               </li>
             ))}
+            <li
+              className="autocomplete-item hud-dropdown-item online-search-action"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                onOpenCustomStarModal(filterSearch);
+                onSearchChange('');
+              }}
+            >
+              <span className="ac-name highlight">{t('searchOnlinePrompt', { query: filterSearch })}</span>
+            </li>
           </ul>
         )}
+
+        <button
+          type="button"
+          className="action-btn hud-action-btn custom-star-trigger-btn"
+          onClick={() => onOpenCustomStarModal()}
+          title={t('customStarModalTitle')}
+        >
+          <PlusCircle size={14} aria-hidden="true" />
+          <span>{t('addOrCustomStarBtn')}</span>
+          {customStarsCount > 0 && <span className="custom-count-pill">{customStarsCount}</span>}
+        </button>
       </div>
 
       <div className="control-group hud-group">
@@ -147,6 +172,7 @@ export default function ControlPanel({
           <span>{t('sensorOverlaysHeader')}</span>
         </div>
         <div className="toggles-list hud-toggles">
+          <Toggle checked={showNamedStars} onToggle={onToggleNamedStars} label={t('toggleNamedStars', { count: formatInt(famousStars.length, lang) })} hint={t('toggleNamedStarsHint')} />
           <Toggle checked={showBackgroundPopulation} onToggle={onToggleBackgroundPopulation} label={t('toggleHipparcos', { count: formatInt(backgroundCount, lang) })} hint={t('toggleHipparcosHint')} />
           <Toggle checked={showRegions} onToggle={onToggleRegions} label={t('toggleRegions')} />
           <Toggle checked={showIsoradii} onToggle={onToggleIsoradii} label={t('toggleIsoradii')} />
@@ -166,3 +192,4 @@ export default function ControlPanel({
     </div>
   );
 }
+
