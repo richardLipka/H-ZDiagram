@@ -10,13 +10,19 @@ const MARGINS = { top: 68, right: 75, bottom: 65, left: 85 };
 const ZOOM_MIN = 0.6;
 const ZOOM_MAX = 6.0;
 
+/** Whether a star has confirmed exoplanets or planetary companions. */
+function hasPlanetarySystem(star) {
+  if (!star) return false;
+  return Boolean(star.hasExoplanets || (star.planetCount && star.planetCount > 0) || (star.exoplanetCount && star.exoplanetCount > 0));
+}
+
 /** Whether a catalogue star passes the active filters. */
 function isVisible(star, { filterClass, filterPlanetsOnly, filterSearch, showRelativisticRemnants }) {
   if (filterClass !== 'ALL') {
     const spec = star.spectralType || '';
     if (filterClass === 'D' ? star.luminosityClass !== 'D' : !spec.startsWith(filterClass)) return false;
   }
-  if (filterPlanetsOnly && !star.hasExoplanets) return false;
+  if (filterPlanetsOnly && !hasPlanetarySystem(star)) return false;
   if (filterSearch && !star.name.toLowerCase().includes(filterSearch.toLowerCase())) return false;
   if (star.isExotic && !showRelativisticRemnants) return false;
   return true;
@@ -404,7 +410,7 @@ export default function HRCanvas({
     ctx.restore();
 
     // 8. Background population (Hipparcos stars with parallax errors < 10 %)
-    if (showBackgroundPopulation && backgroundStars && backgroundStars.length > 0) {
+    if (showBackgroundPopulation && !filterPlanetsOnly && backgroundStars && backgroundStars.length > 0) {
       ctx.save();
       clipToPlot();
       for (const [temp, lum, specClass] of backgroundStars) {
@@ -565,7 +571,7 @@ export default function HRCanvas({
     ctx.save();
     clipToPlot();
     for (const star of famousStars) {
-      if (!showNamedStars && !star.isCustom) continue;
+      if (!showNamedStars && !star.isCustom && !filterPlanetsOnly) continue;
       if (!isVisible(star, filters)) continue;
       const pos = starPosition(coords, star);
       if (!coords.isInPlotBounds(pos.x, pos.y)) continue;
@@ -573,10 +579,32 @@ export default function HRCanvas({
       const rgb = temperatureToRGB(star.temp);
       const isSelected = selectedStar && selectedStar.id === star.id;
       const isHovered = hoveredStar && hoveredStar.id === star.id;
+      const starHasPlanets = hasPlanetarySystem(star);
       let dotRadius = star.isCustom ? 5.5 : 4;
       if (star.luminosityClass === 'I') dotRadius = 6.5;
       else if (star.luminosityClass === 'III' || star.luminosityClass === 'II') dotRadius = 5.2;
       else if (star.luminosityClass === 'D') dotRadius = 3.2;
+
+      // Draw planetary orbit indicator around stars with confirmed planets
+      if (starHasPlanets) {
+        const ringR = dotRadius + (filterPlanetsOnly ? 5 : 3.5);
+        ctx.strokeStyle = filterPlanetsOnly ? '#00f0ff' : 'rgba(0, 240, 255, 0.4)';
+        ctx.lineWidth = filterPlanetsOnly ? 1.5 : 1;
+        ctx.setLineDash(filterPlanetsOnly ? [] : [2, 2]);
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, ringR, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Small satellite planet dot
+        const angle = -0.7;
+        const px = pos.x + Math.cos(angle) * ringR;
+        const py = pos.y + Math.sin(angle) * ringR;
+        ctx.fillStyle = '#00f0ff';
+        ctx.beginPath();
+        ctx.arc(px, py, filterPlanetsOnly ? 2 : 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       if (isSelected || isHovered) {
         const r = dotRadius + 8;
@@ -634,14 +662,16 @@ export default function HRCanvas({
       }
       ctx.shadowBlur = 0;
 
-      if (showFamousLabels || isSelected || isHovered || star.isCustom) {
+      if (showFamousLabels || isSelected || isHovered || star.isCustom || (filterPlanetsOnly && starHasPlanets)) {
         ctx.font = isSelected ? '700 11px "JetBrains Mono", monospace' : '500 10px "JetBrains Mono", monospace';
-        ctx.fillStyle = isSelected ? '#00f0ff' : star.isCustom ? '#38bdf8' : '#ffffff';
+        ctx.fillStyle = isSelected ? '#00f0ff' : star.isCustom ? '#38bdf8' : filterPlanetsOnly ? '#e0f2fe' : '#ffffff';
         ctx.shadowColor = '#000000';
         ctx.shadowBlur = 4;
         ctx.textAlign = 'left';
         const prefix = star.isCustom ? '✦ ' : '';
-        ctx.fillText(pos.offScale ? `${prefix}${star.name} (${formatInt(star.temp, lang)} K)` : `${prefix}${star.name}`, pos.x + dotRadius + 8, pos.y + 3);
+        const planetCountNum = star.exoplanetCount || star.planetCount || 0;
+        const planetTag = (filterPlanetsOnly && planetCountNum > 0) ? ` 🪐 ${planetCountNum}` : '';
+        ctx.fillText(pos.offScale ? `${prefix}${star.name} (${formatInt(star.temp, lang)} K)` : `${prefix}${star.name}${planetTag}`, pos.x + dotRadius + 8, pos.y + 3);
         ctx.shadowBlur = 0;
       }
     }
@@ -703,7 +733,7 @@ export default function HRCanvas({
 
     // 1. Check named & custom stars
     for (const star of famousStars) {
-      if (!showNamedStars && !star.isCustom) continue;
+      if (!showNamedStars && !star.isCustom && !filterPlanetsOnly) continue;
       if (!isVisible(star, filters)) continue;
       const p = starPosition(coords, star);
       if (!coords.isInPlotBounds(p.x, p.y)) continue;
@@ -715,7 +745,7 @@ export default function HRCanvas({
     }
 
     // 2. If nothing matched and Hipparcos background population is visible, check background survey stars
-    if (!found && showBackgroundPopulation && backgroundStars && backgroundStars.length > 0) {
+    if (!found && showBackgroundPopulation && !filterPlanetsOnly && backgroundStars && backgroundStars.length > 0) {
       let bgMinD = Math.min(maxDist, 10);
       for (let i = 0; i < backgroundStars.length; i++) {
         const [temp, lum, specClass, lumClass] = backgroundStars[i];
@@ -843,6 +873,11 @@ export default function HRCanvas({
 
       <div className="canvas-telemetry-tl" aria-hidden="true">
         <span className="telemetry-item">{t('canvasHelp')}</span>
+        {filterPlanetsOnly && (
+          <span className="telemetry-item telemetry-filter-active">
+            🪐 {t('activePlanetsFilter', { count: famousStars.filter(hasPlanetarySystem).length })}
+          </span>
+        )}
       </div>
 
       <div className="canvas-overlay-controls hud-canvas-controls">
@@ -869,8 +904,8 @@ export default function HRCanvas({
             <div><span>{t('tempLabel')}</span> {formatInt(hoveredStar.temp, lang)} K</div>
             <div><span>{t('lumLabel')}</span> {formatSig(hoveredStar.lum, lang)} L☉</div>
             <div><span>{t('radiusLabel')}</span> {formatSig(hoveredStar.radius, lang)} R☉</div>
-            {hoveredStar.hasExoplanets && (
-              <div className="tooltip-planet-tag">{t('tooltipExoplanets', { count: hoveredStar.exoplanetCount })}</div>
+            {hasPlanetarySystem(hoveredStar) && (
+              <div className="tooltip-planet-tag">{t('tooltipExoplanets', { count: hoveredStar.exoplanetCount || hoveredStar.planetCount || 1 })}</div>
             )}
             <div className="tooltip-action-hint">{t('tooltipClickHint')}</div>
           </div>

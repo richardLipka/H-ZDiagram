@@ -537,6 +537,19 @@
   letter-spacing: 0.08em;
 }
 
+.telemetry-filter-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 240, 255, 0.16);
+  border: 1px solid rgba(0, 240, 255, 0.6);
+  color: #a5f3fc;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.25);
+}
+
 /* Tactical Canvas Controls */
 .hud-canvas-controls {
   position: absolute;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Search, Filter, SlidersHorizontal, PlusCircle } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { formatInt } from '../utils/format';
@@ -44,9 +44,26 @@ export default function ControlPanel({
   const { t, lang } = useLanguage();
   const [activeIndex, setActiveIndex] = useState(-1);
 
-  const matches = filterSearch
-    ? famousStars.filter((s) => s.name.toLowerCase().includes(filterSearch.toLowerCase())).slice(0, 8)
-    : [];
+  const planetStarsCount = useMemo(
+    () => famousStars.filter((s) => Boolean(s.hasExoplanets || (s.planetCount && s.planetCount > 0) || (s.exoplanetCount && s.exoplanetCount > 0))).length,
+    [famousStars]
+  );
+
+  const matches = useMemo(() => {
+    if (!filterSearch) return [];
+    const query = filterSearch.toLowerCase();
+    return famousStars
+      .filter((s) => {
+        if (!s.name.toLowerCase().includes(query)) return false;
+        if (filterPlanetsOnly && !s.hasExoplanets && !(s.planetCount > 0) && !(s.exoplanetCount > 0)) return false;
+        if (filterClass !== 'ALL') {
+          const spec = s.spectralType || '';
+          if (filterClass === 'D' ? s.luminosityClass !== 'D' : !spec.startsWith(filterClass)) return false;
+        }
+        return true;
+      })
+      .slice(0, 8);
+  }, [filterSearch, famousStars, filterPlanetsOnly, filterClass]);
 
   const choose = (s) => {
     onSelectStar(s);
@@ -177,7 +194,7 @@ export default function ControlPanel({
           <Toggle checked={showRegions} onToggle={onToggleRegions} label={t('toggleRegions')} />
           <Toggle checked={showIsoradii} onToggle={onToggleIsoradii} label={t('toggleIsoradii')} />
           <Toggle checked={showFamousLabels} onToggle={onToggleFamousLabels} label={t('toggleLabels')} />
-          <Toggle checked={filterPlanetsOnly} onToggle={onTogglePlanetsOnly} label={t('togglePlanetsOnly')} />
+          <Toggle checked={filterPlanetsOnly} onToggle={onTogglePlanetsOnly} label={t('togglePlanetsOnly', { count: formatInt(planetStarsCount, lang) })} hint={t('togglePlanetsOnlyHint')} />
           <Toggle checked={showGaiaFineStructure} onToggle={onToggleGaiaFineStructure} label={t('toggleGaiaFine')} />
           <Toggle checked={showRelativisticRemnants} onToggle={onToggleRelativisticRemnants} label={t('toggleRelativistic')} />
         </div>
