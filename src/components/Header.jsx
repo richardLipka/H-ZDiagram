@@ -1,9 +1,10 @@
 import React from 'react';
-import { Telescope, Orbit, Clock, Layers, Info, Database, Globe, GraduationCap } from 'lucide-react';
+import { Telescope, Orbit, Clock, Layers, Info, Database, Globe, GraduationCap, Compass } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 
 const MODES = [
   { id: 'explore', icon: Telescope, label: 'navExplore', title: 'navExploreTitle' },
+  { id: 'hz_diagram', icon: Compass, label: 'navHZDiagram', title: 'navHZDiagramTitle' },
   { id: 'evolution', icon: Orbit, label: 'navEvolution', title: 'navEvolutionTitle' },
   { id: 'cluster', icon: Clock, label: 'navClusters', title: 'navClustersTitle' },
   { id: 'academy', icon: GraduationCap, label: 'navAcademy', title: 'navAcademyTitle' },

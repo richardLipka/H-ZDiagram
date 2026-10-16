@@ -16,13 +16,22 @@ function hasPlanetarySystem(star) {
   return Boolean(star.hasExoplanets || (star.planetCount && star.planetCount > 0) || (star.exoplanetCount && star.exoplanetCount > 0));
 }
 
+/** Whether a star hosts a planet in the Habitable Zone. */
+function starHasHZPlanet(star, hostsWithHZ) {
+  if (!star) return false;
+  if (star.id === 'sun') return true;
+  const hostKey = (star.neaHost || star.name || star.id || '').toLowerCase();
+  return hostsWithHZ ? hostsWithHZ.has(hostKey) : false;
+}
+
 /** Whether a catalogue star passes the active filters. */
-function isVisible(star, { filterClass, filterPlanetsOnly, filterSearch, showRelativisticRemnants }) {
+function isVisible(star, { filterClass, filterPlanetsOnly, filterHabitableZoneOnly, hostsWithHZ, filterSearch, showRelativisticRemnants }) {
   if (filterClass !== 'ALL') {
     const spec = star.spectralType || '';
     if (filterClass === 'D' ? star.luminosityClass !== 'D' : !spec.startsWith(filterClass)) return false;
   }
   if (filterPlanetsOnly && !hasPlanetarySystem(star)) return false;
+  if (filterHabitableZoneOnly && !starHasHZPlanet(star, hostsWithHZ)) return false;
   if (filterSearch && !star.name.toLowerCase().includes(filterSearch.toLowerCase())) return false;
   if (star.isExotic && !showRelativisticRemnants) return false;
   return true;
@@ -48,6 +57,8 @@ export default function HRCanvas({
   clusterAgeGyr,
   filterClass,
   filterPlanetsOnly,
+  filterHabitableZoneOnly = false,
+  hostsWithHZ,
   filterSearch,
   showNamedStars = true,
   showIsoradii,
@@ -69,8 +80,8 @@ export default function HRCanvas({
 
   const dragRef = useRef({ isDown: false, hasMoved: false, startX: 0, startY: 0, panX: 0, panY: 0 });
   const filters = useMemo(
-    () => ({ filterClass, filterPlanetsOnly, filterSearch, showRelativisticRemnants }),
-    [filterClass, filterPlanetsOnly, filterSearch, showRelativisticRemnants]
+    () => ({ filterClass, filterPlanetsOnly, filterHabitableZoneOnly, hostsWithHZ, filterSearch, showRelativisticRemnants }),
+    [filterClass, filterPlanetsOnly, filterHabitableZoneOnly, hostsWithHZ, filterSearch, showRelativisticRemnants]
   );
 
   // Track container size
@@ -410,7 +421,7 @@ export default function HRCanvas({
     ctx.restore();
 
     // 8. Background population (Hipparcos stars with parallax errors < 10 %)
-    if (showBackgroundPopulation && !filterPlanetsOnly && backgroundStars && backgroundStars.length > 0) {
+    if (showBackgroundPopulation && !filterPlanetsOnly && !filterHabitableZoneOnly && backgroundStars && backgroundStars.length > 0) {
       ctx.save();
       clipToPlot();
       for (const [temp, lum, specClass] of backgroundStars) {
@@ -571,7 +582,7 @@ export default function HRCanvas({
     ctx.save();
     clipToPlot();
     for (const star of famousStars) {
-      if (!showNamedStars && !star.isCustom && !filterPlanetsOnly) continue;
+      if (!showNamedStars && !star.isCustom && !filterPlanetsOnly && !filterHabitableZoneOnly) continue;
       if (!isVisible(star, filters)) continue;
       const pos = starPosition(coords, star);
       if (!coords.isInPlotBounds(pos.x, pos.y)) continue;
@@ -580,29 +591,33 @@ export default function HRCanvas({
       const isSelected = selectedStar && selectedStar.id === star.id;
       const isHovered = hoveredStar && hoveredStar.id === star.id;
       const starHasPlanets = hasPlanetarySystem(star);
+      const hasHZ = starHasHZPlanet(star, hostsWithHZ);
       let dotRadius = star.isCustom ? 5.5 : 4;
       if (star.luminosityClass === 'I') dotRadius = 6.5;
       else if (star.luminosityClass === 'III' || star.luminosityClass === 'II') dotRadius = 5.2;
       else if (star.luminosityClass === 'D') dotRadius = 3.2;
 
-      // Draw planetary orbit indicator around stars with confirmed planets
-      if (starHasPlanets) {
-        const ringR = dotRadius + (filterPlanetsOnly ? 5 : 3.5);
-        ctx.strokeStyle = filterPlanetsOnly ? '#00f0ff' : 'rgba(0, 240, 255, 0.4)';
-        ctx.lineWidth = filterPlanetsOnly ? 1.5 : 1;
-        ctx.setLineDash(filterPlanetsOnly ? [] : [2, 2]);
+      // Draw planetary orbit indicator around stars with confirmed planets or HZ planets
+      if (starHasPlanets || hasHZ) {
+        const ringR = dotRadius + (filterHabitableZoneOnly || filterPlanetsOnly ? 5.5 : 3.5);
+        ctx.strokeStyle = hasHZ ? '#00ff88' : filterPlanetsOnly ? '#00f0ff' : 'rgba(0, 240, 255, 0.4)';
+        ctx.lineWidth = hasHZ ? (filterHabitableZoneOnly ? 2.2 : 1.8) : filterPlanetsOnly ? 1.5 : 1;
+        ctx.setLineDash(filterPlanetsOnly || hasHZ ? [] : [2, 2]);
+        ctx.shadowColor = hasHZ ? '#00ff88' : '#00f0ff';
+        ctx.shadowBlur = hasHZ ? 10 : 0;
         ctx.beginPath();
         ctx.arc(pos.x, pos.y, ringR, 0, Math.PI * 2);
         ctx.stroke();
         ctx.setLineDash([]);
+        ctx.shadowBlur = 0;
 
         // Small satellite planet dot
         const angle = -0.7;
         const px = pos.x + Math.cos(angle) * ringR;
         const py = pos.y + Math.sin(angle) * ringR;
-        ctx.fillStyle = '#00f0ff';
+        ctx.fillStyle = hasHZ ? '#00ff88' : '#00f0ff';
         ctx.beginPath();
-        ctx.arc(px, py, filterPlanetsOnly ? 2 : 1.2, 0, Math.PI * 2);
+        ctx.arc(px, py, filterPlanetsOnly || hasHZ ? 2.2 : 1.2, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -662,15 +677,16 @@ export default function HRCanvas({
       }
       ctx.shadowBlur = 0;
 
-      if (showFamousLabels || isSelected || isHovered || star.isCustom || (filterPlanetsOnly && starHasPlanets)) {
+      if (showFamousLabels || isSelected || isHovered || star.isCustom || ((filterPlanetsOnly || filterHabitableZoneOnly) && starHasPlanets)) {
         ctx.font = isSelected ? '700 11px "JetBrains Mono", monospace' : '500 10px "JetBrains Mono", monospace';
-        ctx.fillStyle = isSelected ? '#00f0ff' : star.isCustom ? '#38bdf8' : filterPlanetsOnly ? '#e0f2fe' : '#ffffff';
+        ctx.fillStyle = isSelected ? '#00f0ff' : star.isCustom ? '#38bdf8' : hasHZ ? '#a7f3d0' : filterPlanetsOnly ? '#e0f2fe' : '#ffffff';
         ctx.shadowColor = '#000000';
         ctx.shadowBlur = 4;
         ctx.textAlign = 'left';
         const prefix = star.isCustom ? '✦ ' : '';
         const planetCountNum = star.exoplanetCount || star.planetCount || 0;
-        const planetTag = (filterPlanetsOnly && planetCountNum > 0) ? ` 🪐 ${planetCountNum}` : '';
+        const hzTag = hasHZ ? ' ⊕ HZ' : '';
+        const planetTag = ((filterPlanetsOnly || filterHabitableZoneOnly) && planetCountNum > 0) ? ` 🪐 ${planetCountNum}${hzTag}` : hzTag;
         ctx.fillText(pos.offScale ? `${prefix}${star.name} (${formatInt(star.temp, lang)} K)` : `${prefix}${star.name}${planetTag}`, pos.x + dotRadius + 8, pos.y + 3);
         ctx.shadowBlur = 0;
       }
@@ -715,7 +731,7 @@ export default function HRCanvas({
   }, [
     zoom, pan, dimensions, famousStars, backgroundStars, selectedStar, hoveredStar, activeMode,
     evolutionState, evolutionTrackPoints, clusterIsochrone, clusterMembers, clusterAgeGyr,
-    filters, filterClass, filterPlanetsOnly, filterSearch, showNamedStars, showIsoradii, showRegions, showBackgroundPopulation,
+    filters, filterClass, filterPlanetsOnly, filterHabitableZoneOnly, hostsWithHZ, filterSearch, showNamedStars, showIsoradii, showRegions, showBackgroundPopulation,
     showFamousLabels, showGaiaFineStructure, showRelativisticRemnants, lang, t
   ]);
 
@@ -733,7 +749,7 @@ export default function HRCanvas({
 
     // 1. Check named & custom stars
     for (const star of famousStars) {
-      if (!showNamedStars && !star.isCustom && !filterPlanetsOnly) continue;
+      if (!showNamedStars && !star.isCustom && !filterPlanetsOnly && !filterHabitableZoneOnly) continue;
       if (!isVisible(star, filters)) continue;
       const p = starPosition(coords, star);
       if (!coords.isInPlotBounds(p.x, p.y)) continue;
@@ -745,7 +761,7 @@ export default function HRCanvas({
     }
 
     // 2. If nothing matched and Hipparcos background population is visible, check background survey stars
-    if (!found && showBackgroundPopulation && !filterPlanetsOnly && backgroundStars && backgroundStars.length > 0) {
+    if (!found && showBackgroundPopulation && !filterPlanetsOnly && !filterHabitableZoneOnly && backgroundStars && backgroundStars.length > 0) {
       let bgMinD = Math.min(maxDist, 10);
       for (let i = 0; i < backgroundStars.length; i++) {
         const [temp, lum, specClass, lumClass] = backgroundStars[i];
@@ -876,6 +892,11 @@ export default function HRCanvas({
         {filterPlanetsOnly && (
           <span className="telemetry-item telemetry-filter-active">
             🪐 {t('activePlanetsFilter', { count: famousStars.filter(hasPlanetarySystem).length })}
+          </span>
+        )}
+        {filterHabitableZoneOnly && (
+          <span className="telemetry-item telemetry-filter-active hz-emerald">
+            ⊕ {t('activeHZPlanetsFilter', { count: famousStars.filter((s) => starHasHZPlanet(s, hostsWithHZ)).length })}
           </span>
         )}
       </div>

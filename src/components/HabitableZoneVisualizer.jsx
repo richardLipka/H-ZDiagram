@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { temperatureToRGB } from '../simulation/blackbody';
 import { getPlanetarySystem, getDetailedHabitableZone, classifyPlanetZone } from '../simulation/planetaryData';
+import { loadExoplanetDataset } from '../services/exoplanetService';
 import { useLanguage } from '../i18n/LanguageContext';
 import { formatSig } from '../utils/format';
 import { Orbit, ZoomIn, ZoomOut, Info, ShieldCheck, Snowflake, Flame, BookOpen, Database, ExternalLink, AlertTriangle } from 'lucide-react';
@@ -15,11 +16,38 @@ const ZONE_LABEL_KEYS = {
 
 export default function HabitableZoneVisualizer({ star, lum, temp, isEvolutionMode = false }) {
   const { lang, t } = useLanguage();
+  const [exoplanetDataset, setExoplanetDataset] = useState(null);
+
+  useEffect(() => {
+    loadExoplanetDataset().then(setExoplanetDataset).catch(() => {});
+  }, []);
 
   const currentLum = Math.max(1e-8, lum !== undefined ? lum : star ? star.lum : 1.0);
   const currentTemp = Math.max(1000, temp !== undefined ? temp : star ? star.temp : 5772);
   const hz = useMemo(() => getDetailedHabitableZone(currentLum, currentTemp), [currentLum, currentTemp]);
-  const planets = useMemo(() => (star ? getPlanetarySystem(star.id) : null) || [], [star]);
+
+  const planets = useMemo(() => {
+    if (!star) return [];
+    // 1. Curated hardcoded systems
+    const curated = getPlanetarySystem(star.id);
+    if (curated && curated.length > 0) return curated;
+    // 2. NASA exoplanet dataset
+    if (exoplanetDataset && exoplanetDataset.planetsByHost) {
+      const candidates = [
+        star.neaHost,
+        star.name,
+        star.name?.replace(/\s+[A-Z]$/, ''), // e.g. "55 Cnc A" -> "55 Cnc"
+        star.bayer,
+        star.id
+      ].filter(Boolean);
+
+      for (const cand of candidates) {
+        const found = exoplanetDataset.planetsByHost.get(cand.toLowerCase());
+        if (found && found.length > 0) return found;
+      }
+    }
+    return [];
+  }, [star, exoplanetDataset]);
 
   // Kopparapu et al. limits are computed for main-sequence hosts
   const notMainSequence = !isEvolutionMode && star && star.luminosityClass !== 'V';
@@ -48,7 +76,7 @@ export default function HabitableZoneVisualizer({ star, lum, temp, isEvolutionMo
   let notice;
   if (isEvolutionMode) notice = t('chzEvolutionNotice');
   else if (star && star.id === 'sun') notice = t('chzSolarSystemNotice');
-  else if (star && star.hasExoplanets) notice = t(planets.length ? 'chzConfirmedNotice' : 'chzConfirmedNoOrbitsNotice', { count: star.exoplanetCount });
+  else if (star && (star.hasExoplanets || planets.length > 0)) notice = t(planets.length ? 'chzConfirmedNotice' : 'chzConfirmedNoOrbitsNotice', { count: star.exoplanetCount || planets.length });
   else notice = t('chzTheoreticalNotice');
 
   return (

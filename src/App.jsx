@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import HRCanvas from './components/HRCanvas';
+import HZDiagramCanvas from './components/HZDiagramCanvas';
 import StarInspector from './components/StarInspector';
 import EvolutionSimulator from './components/EvolutionSimulator';
 import ClusterSimulator from './components/ClusterSimulator';
@@ -13,6 +14,7 @@ import ControlPanel from './components/ControlPanel';
 import Footer from './components/Footer';
 
 import { loadStellarDatasets } from './services/dataLoader';
+import { loadExoplanetDataset } from './services/exoplanetService';
 import { getEvolutionState, EVOLUTION_TRACKS } from './simulation/evolutionTracks';
 import { generateIsochronePoints } from './simulation/clusterSimulation';
 import { useLanguage } from './i18n/LanguageContext';
@@ -37,10 +39,11 @@ export default function App() {
   const [backgroundStars, setBackgroundStars] = useState([]);
   const [clusterMembers, setClusterMembers] = useState({ pleiades: [], hyades: [] });
   const [attribution, setAttribution] = useState(null);
+  const [exoplanetData, setExoplanetData] = useState(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
-  const [activeMode, setActiveMode] = useState('explore'); // explore | evolution | cluster | academy | compare
+  const [activeMode, setActiveMode] = useState('explore'); // explore | evolution | cluster | academy | compare | hz_diagram
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [isAttributionOpen, setIsAttributionOpen] = useState(false);
   const [isCustomStarModalOpen, setIsCustomStarModalOpen] = useState(false);
@@ -52,6 +55,7 @@ export default function App() {
   const [filterSearch, setFilterSearch] = useState('');
   const [filterClass, setFilterClass] = useState('ALL');
   const [filterPlanetsOnly, setFilterPlanetsOnly] = useState(false);
+  const [filterHabitableZoneOnly, setFilterHabitableZoneOnly] = useState(false);
   const [showNamedStars, setShowNamedStars] = useState(true);
   const [showIsoradii, setShowIsoradii] = useState(true);
   const [showRegions, setShowRegions] = useState(true);
@@ -96,7 +100,13 @@ export default function App() {
         setLoadError(true);
         setIsLoadingData(false);
       });
+
+    loadExoplanetDataset()
+      .then(setExoplanetData)
+      .catch((err) => console.warn('Failed to load exoplanet dataset:', err));
   }, []);
+
+  const hostsWithHZ = useMemo(() => exoplanetData?.hostsWithHZ || new Set(), [exoplanetData]);
 
   const allStars = useMemo(() => [...famousStars, ...customStars], [famousStars, customStars]);
 
@@ -197,57 +207,73 @@ export default function App() {
       />
 
       <main className="app-main-content">
-        <ControlPanel
-          filterSearch={filterSearch}
-          onSearchChange={setFilterSearch}
-          filterClass={filterClass}
-          onSelectClass={setFilterClass}
-          filterPlanetsOnly={filterPlanetsOnly}
-          onTogglePlanetsOnly={() => setFilterPlanetsOnly((v) => !v)}
-          showNamedStars={showNamedStars}
-          onToggleNamedStars={() => setShowNamedStars((v) => !v)}
-          showIsoradii={showIsoradii}
-          onToggleIsoradii={() => setShowIsoradii((v) => !v)}
-          showRegions={showRegions}
-          onToggleRegions={() => setShowRegions((v) => !v)}
-          showBackgroundPopulation={showBackgroundPopulation}
-          onToggleBackgroundPopulation={() => setShowBackgroundPopulation((v) => !v)}
-          showFamousLabels={showFamousLabels}
-          onToggleFamousLabels={() => setShowFamousLabels((v) => !v)}
-          showGaiaFineStructure={showGaiaFineStructure}
-          onToggleGaiaFineStructure={() => setShowGaiaFineStructure((v) => !v)}
-          showRelativisticRemnants={showRelativisticRemnants}
-          onToggleRelativisticRemnants={() => setShowRelativisticRemnants((v) => !v)}
-          famousStars={allStars}
-          backgroundCount={backgroundStars.length}
-          onSelectStar={setSelectedStar}
-          onOpenCustomStarModal={handleOpenCustomStarModal}
-          customStarsCount={customStars.length}
-        />
+        {activeMode !== 'hz_diagram' && (
+          <ControlPanel
+            filterSearch={filterSearch}
+            onSearchChange={setFilterSearch}
+            filterClass={filterClass}
+            onSelectClass={setFilterClass}
+            filterPlanetsOnly={filterPlanetsOnly}
+            onTogglePlanetsOnly={() => setFilterPlanetsOnly((v) => !v)}
+            filterHabitableZoneOnly={filterHabitableZoneOnly}
+            onToggleHabitableZoneOnly={() => setFilterHabitableZoneOnly((v) => !v)}
+            hostsWithHZ={hostsWithHZ}
+            showNamedStars={showNamedStars}
+            onToggleNamedStars={() => setShowNamedStars((v) => !v)}
+            showIsoradii={showIsoradii}
+            onToggleIsoradii={() => setShowIsoradii((v) => !v)}
+            showRegions={showRegions}
+            onToggleRegions={() => setShowRegions((v) => !v)}
+            showBackgroundPopulation={showBackgroundPopulation}
+            onToggleBackgroundPopulation={() => setShowBackgroundPopulation((v) => !v)}
+            showFamousLabels={showFamousLabels}
+            onToggleFamousLabels={() => setShowFamousLabels((v) => !v)}
+            showGaiaFineStructure={showGaiaFineStructure}
+            onToggleGaiaFineStructure={() => setShowGaiaFineStructure((v) => !v)}
+            showRelativisticRemnants={showRelativisticRemnants}
+            onToggleRelativisticRemnants={() => setShowRelativisticRemnants((v) => !v)}
+            famousStars={allStars}
+            backgroundCount={backgroundStars.length}
+            onSelectStar={setSelectedStar}
+            onOpenCustomStarModal={handleOpenCustomStarModal}
+            customStarsCount={customStars.length}
+          />
+        )}
 
         <div className="diagram-workspace">
-          <HRCanvas
-            famousStars={allStars}
-            backgroundStars={backgroundStars}
-            selectedStar={selectedStar}
-            onSelectStar={setSelectedStar}
-            activeMode={activeMode}
-            evolutionState={evolutionState}
-            evolutionTrackPoints={evolutionTrackPoints}
-            clusterIsochrone={clusterIsochrone}
-            clusterMembers={clusterMembers}
-            clusterAgeGyr={clusterAgeGyr}
-            filterClass={filterClass}
-            filterPlanetsOnly={filterPlanetsOnly}
-            filterSearch={filterSearch}
-            showNamedStars={showNamedStars}
-            showIsoradii={showIsoradii}
-            showRegions={showRegions}
-            showBackgroundPopulation={showBackgroundPopulation}
-            showFamousLabels={showFamousLabels}
-            showGaiaFineStructure={showGaiaFineStructure}
-            showRelativisticRemnants={showRelativisticRemnants}
-          />
+          {activeMode === 'hz_diagram' ? (
+            <HZDiagramCanvas
+              exoplanetData={exoplanetData}
+              onSelectStar={setSelectedStar}
+              famousStars={allStars}
+              onOpenCustomStarModal={handleOpenCustomStarModal}
+            />
+          ) : (
+            <HRCanvas
+              famousStars={allStars}
+              backgroundStars={backgroundStars}
+              selectedStar={selectedStar}
+              onSelectStar={setSelectedStar}
+              activeMode={activeMode}
+              evolutionState={evolutionState}
+              evolutionTrackPoints={evolutionTrackPoints}
+              clusterIsochrone={clusterIsochrone}
+              clusterMembers={clusterMembers}
+              clusterAgeGyr={clusterAgeGyr}
+              filterClass={filterClass}
+              filterPlanetsOnly={filterPlanetsOnly}
+              filterHabitableZoneOnly={filterHabitableZoneOnly}
+              hostsWithHZ={hostsWithHZ}
+              filterSearch={filterSearch}
+              showNamedStars={showNamedStars}
+              showIsoradii={showIsoradii}
+              showRegions={showRegions}
+              showBackgroundPopulation={showBackgroundPopulation}
+              showFamousLabels={showFamousLabels}
+              showGaiaFineStructure={showGaiaFineStructure}
+              showRelativisticRemnants={showRelativisticRemnants}
+            />
+          )}
 
           {activeMode === 'evolution' && (
             <EvolutionSimulator

@@ -21,6 +21,9 @@ export default function ControlPanel({
   onSelectClass,
   filterPlanetsOnly,
   onTogglePlanetsOnly,
+  filterHabitableZoneOnly = false,
+  onToggleHabitableZoneOnly,
+  hostsWithHZ,
   showNamedStars,
   onToggleNamedStars,
   showIsoradii,
@@ -49,6 +52,14 @@ export default function ControlPanel({
     [famousStars]
   );
 
+  const hzStarsCount = useMemo(() => {
+    return famousStars.filter((s) => {
+      if (s.id === 'sun') return true;
+      const hostKey = (s.neaHost || s.name || s.id || '').toLowerCase();
+      return hostsWithHZ?.has(hostKey) || false;
+    }).length;
+  }, [famousStars, hostsWithHZ]);
+
   const matches = useMemo(() => {
     if (!filterSearch) return [];
     const query = filterSearch.toLowerCase();
@@ -56,6 +67,10 @@ export default function ControlPanel({
       .filter((s) => {
         if (!s.name.toLowerCase().includes(query)) return false;
         if (filterPlanetsOnly && !s.hasExoplanets && !(s.planetCount > 0) && !(s.exoplanetCount > 0)) return false;
+        if (filterHabitableZoneOnly) {
+          const hostKey = (s.neaHost || s.name || s.id || '').toLowerCase();
+          if (s.id !== 'sun' && !hostsWithHZ?.has(hostKey)) return false;
+        }
         if (filterClass !== 'ALL') {
           const spec = s.spectralType || '';
           if (filterClass === 'D' ? s.luminosityClass !== 'D' : !spec.startsWith(filterClass)) return false;
@@ -63,7 +78,7 @@ export default function ControlPanel({
         return true;
       })
       .slice(0, 8);
-  }, [filterSearch, famousStars, filterPlanetsOnly, filterClass]);
+  }, [filterSearch, famousStars, filterPlanetsOnly, filterHabitableZoneOnly, hostsWithHZ, filterClass]);
 
   const choose = (s) => {
     onSelectStar(s);
@@ -195,6 +210,7 @@ export default function ControlPanel({
           <Toggle checked={showIsoradii} onToggle={onToggleIsoradii} label={t('toggleIsoradii')} />
           <Toggle checked={showFamousLabels} onToggle={onToggleFamousLabels} label={t('toggleLabels')} />
           <Toggle checked={filterPlanetsOnly} onToggle={onTogglePlanetsOnly} label={t('togglePlanetsOnly', { count: formatInt(planetStarsCount, lang) })} hint={t('togglePlanetsOnlyHint')} />
+          <Toggle checked={filterHabitableZoneOnly} onToggle={onToggleHabitableZoneOnly} label={t('toggleHZPlanetsOnly', { count: formatInt(hzStarsCount, lang) })} hint={t('toggleHZPlanetsOnlyHint')} />
           <Toggle checked={showGaiaFineStructure} onToggle={onToggleGaiaFineStructure} label={t('toggleGaiaFine')} />
           <Toggle checked={showRelativisticRemnants} onToggle={onToggleRelativisticRemnants} label={t('toggleRelativistic')} />
         </div>

@@ -4199,3 +4199,174 @@ ul.search-autocomplete-dropdown {
   box-shadow: 0 0 14px rgba(0, 240, 255, 0.2);
 }
 
+/* Habitable Zone (HZ) Diagram Mode */
+.hz-diagram-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: #040814;
+  overflow: hidden;
+}
+
+.hz-controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 8px 16px;
+  background: rgba(4, 10, 24, 0.92);
+  border-bottom: 1px solid rgba(0, 240, 255, 0.25);
+  backdrop-filter: blur(10px);
+  z-index: 20;
+}
+
+.hz-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 260px;
+}
+
+.hz-search-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--holo-cyan);
+  pointer-events: none;
+}
+
+.hz-search-input {
+  width: 100%;
+  padding-left: 32px !important;
+  font-size: 11.5px;
+  height: 30px;
+}
+
+.hz-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hz-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+.hz-filter-btn.active {
+  background: rgba(0, 255, 136, 0.18);
+  border-color: #00ff88;
+  color: #a7f3d0;
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.35);
+}
+
+.hz-size-filters {
+  display: flex;
+  background: rgba(0, 20, 48, 0.6);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.hz-size-btn {
+  background: transparent;
+  border: none;
+  border-right: 1px solid rgba(0, 240, 255, 0.15);
+  padding: 5px 9px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.hz-size-btn:last-child {
+  border-right: none;
+}
+
+.hz-size-btn:hover {
+  color: #ffffff;
+  background: rgba(0, 240, 255, 0.1);
+}
+
+.hz-size-btn.active {
+  background: rgba(0, 240, 255, 0.2);
+  color: var(--holo-cyan);
+  font-weight: 700;
+}
+
+.hz-zoom-group {
+  display: flex;
+  gap: 4px;
+}
+
+.hz-canvas-container {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  height: calc(100% - 50px);
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+.hz-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.hz-canvas-telemetry {
+  position: absolute;
+  top: 14px;
+  left: 95px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: rgba(0, 240, 255, 0.7);
+  pointer-events: none;
+}
+
+.hz-telemetry-badge {
+  background: rgba(0, 240, 255, 0.12);
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+  color: var(--holo-cyan);
+}
+
+.hz-planet-tooltip {
+  pointer-events: none;
+  position: absolute;
+  z-index: 100;
+  min-width: 200px;
+}
+
+.hz-status-pill {
+  margin-top: 6px;
+  padding: 3px 6px;
+  background: rgba(0, 20, 48, 0.8);
+  border-radius: 3px;
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.hz-emerald {
+  background: rgba(0, 255, 136, 0.18) !important;
+  border-color: rgba(0, 255, 136, 0.6) !important;
+  color: #a7f3d0 !important;
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.3) !important;
+}
+
